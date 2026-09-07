@@ -1,0 +1,24 @@
+# bağımlılıklar
+node_modules/
+
+# derleme çıktısı
+dist/
+dev-dist/
+
+# test/coverage
+coverage/
+
+# gizli bilgiler
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.keystore
+
+# editör / işletim sistemi
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
