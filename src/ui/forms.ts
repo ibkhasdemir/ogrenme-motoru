@@ -3,6 +3,7 @@ import type { AtomFacet, HookType, OptionAtomRelation } from '../domain'
 import { ATOM_FACETS, HOOK_TYPES, OPTION_ATOM_RELATIONS } from '../domain'
 import type { AppContext } from './app'
 import { button, field, h, input, textarea } from './dom'
+import { HOOK_TYPE_HINT, HOOK_TYPE_LABEL } from './labels'
 
 const FACET_LABEL: Record<AtomFacet, string> = {
   fact: 'olgu', date: 'tarih', chronology: 'kronoloji', definition: 'tanım', cause_effect: 'sebep-sonuç',
@@ -16,7 +17,7 @@ export async function renderAtomForm(ctx: AppContext): Promise<HTMLElement> {
   const textIn = textarea({ placeholder: 'Tek cümlelik bilgi atomu' })
   const promptIn = textarea({ placeholder: 'Örn. Tanzimat Fermanı hangi yıl ilan edildi?' })
   const whyIn = textarea({ placeholder: 'İsteğe bağlı' })
-  const hookType = h('select', { class: 'input' }, HOOK_TYPES.map((t) => h('option', { value: t }, t))) as HTMLSelectElement
+  const hookType = h('select', { class: 'input', 'aria-label': 'Çengel türü' }, HOOK_TYPES.map((t) => h('option', { value: t }, `${HOOK_TYPE_LABEL[t]} — ${HOOK_TYPE_HINT[t]}`))) as HTMLSelectElement
   const hookIn = textarea({ placeholder: 'İsteğe bağlı' })
   const facets = new Set<AtomFacet>()
   const chips = h('div', { class: 'row', role: 'group', 'aria-label': 'Tür' }, ATOM_FACETS.map((f) => h('button', {

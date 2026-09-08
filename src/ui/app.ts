@@ -8,6 +8,7 @@ import { renderAtomForm, renderQuestionForm } from './forms'
 import { renderContent, type ContentView } from './content'
 import { renderData } from './data'
 import { currentReminder, reminderLine, type BackupSectionState, type BackupServices } from './dataBackup'
+import { hookTypeLabel } from './labels'
 import { restoreDeps, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { emergencyRollback } from '../app/restore'
 import type { UpdateController } from '../pwa/register'
@@ -258,7 +259,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
 
   function hooksBlock(hooks: MemoryHook[]): HTMLElement | null {
     if (!hooks.length) return null
-    return h('div', { class: 'stack' }, hooks.map((hk) => h('div', { class: 'hook' }, h('span', { class: 'hook-type' }, hk.type), h('p', { class: 'text-body' }, hk.content))))
+    return h('div', { class: 'stack' }, hooks.map((hk) => h('div', { class: 'hook' }, h('span', { class: 'hook-type' }, hookTypeLabel(hk.type)), h('p', { class: 'text-body' }, hk.content))))
   }
 
   function atomExplanation(pres: Extract<Presentation, { kind: 'read' | 'question' | 'recall' }>): HTMLElement {

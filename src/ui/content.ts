@@ -5,6 +5,7 @@ import { isCompleteRevision } from '../domain'
 import { affectedAttemptsByKeyChange } from '../engine/question/contentError'
 import type { AppContext } from './app'
 import { button, field, formatDateTimeTr, h, input, textarea } from './dom'
+import { hookTypeLabel } from './labels'
 
 export type ContentView =
   | { kind: 'list'; query?: string }
@@ -83,7 +84,7 @@ async function renderAtom(ctx: AppContext, atomId: string): Promise<HTMLElement>
       : h('div', { class: 'stack' }, h('span', { class: 'badge' }, 'soru yüzü eksik'), field('Soru yüzü', promptIn), button('Soru yüzünü kaydet', () => void savePrompt(), { variant: 'primary', testid: 'save-prompt' })),
     atom.why ? h('p', { class: 'text-body' }, `Neden: ${atom.why}`) : null,
     atom.how ? h('p', { class: 'text-body' }, `Nasıl: ${atom.how}`) : null,
-    hooks.length ? h('div', { class: 'stack' }, hooks.map((hk) => h('div', { class: 'hook' }, h('span', { class: 'hook-type' }, hk.type), h('p', { class: 'text-body' }, hk.content)))) : null,
+    hooks.length ? h('div', { class: 'stack' }, hooks.map((hk) => h('div', { class: 'hook' }, h('span', { class: 'hook-type' }, hookTypeLabel(hk.type)), h('p', { class: 'text-body' }, hk.content)))) : null,
     h('h2', { class: 'text-section' }, `Sorular (${questions.length})`),
     questions.length
       ? h('div', { class: 'stack' }, questions.map((q) => h('button', { type: 'button', class: 'list-item', 'data-question': q.id, onClick: () => void ctx.navigate({ name: 'content', view: { kind: 'question', questionId: q.id } }) }, h('span', {}, `Soru · v${q.currentVersion}${q.archived ? ' · arşivli' : ''}`), h('span', { class: 'source' }, q.source))))

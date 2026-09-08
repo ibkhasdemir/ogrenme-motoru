@@ -5,7 +5,9 @@ import { Motor } from '../src/app/motor'
 import { DexieRepository } from '../src/store/dexie/dexieRepository'
 import { MemoryRepository } from '../src/store/memory/memoryRepository'
 import { mountApp, type AppHandle } from '../src/ui/app'
+import { HOOK_TYPES } from '../src/domain'
 import { LEGACY_UNAVAILABLE_TEXT, VERSION_DATE_UNKNOWN } from '../src/ui/content'
+import { HOOK_TYPE_HINT, HOOK_TYPE_LABEL } from '../src/ui/labels'
 import { DAY, FakeClock, MIN, fakeIds } from './helpers/engineFixture'
 import { seedLegacyV1, testIds, uniqueDbName } from './helpers/legacyDb'
 
@@ -193,6 +195,22 @@ describe('Phase 9 — UI akışı', () => {
     const atts = await repo.listAttempts()
     expect(atts[0]).toMatchObject({ kind: 'recall', support: 'hook', selfAssessment: 'good' })
     expect(screen()).toBe('read') // sonraki öğe
+  })
+
+  it('Çengel türü etiketleri Türkçe: kart/içerikte "Mantık"; formda seçenek metni Türkçe + ipucu, değer enum kalır', async () => {
+    await setup({ withQuestion: false, extraAtoms: 1 })
+    await click(byTestId('start')!)
+    await click(byTestId('read-done')!)
+    expect(screen()).toBe('recall')
+    await click(byTestId('show-hook')!)
+    expect(document.querySelector('.hook-type')!.textContent).toBe('Mantık')
+    expect(text()).not.toMatch(/\blogic\b/)
+    await click(byText("Bugün'e dön"))
+    await click(byText('+ Atom'))
+    const sel = document.querySelector<HTMLSelectElement>('select')!
+    expect([...sel.options].map((o) => o.value)).toEqual([...HOOK_TYPES])
+    expect([...sel.options].map((o) => o.textContent)).toEqual(HOOK_TYPES.map((t) => `${HOOK_TYPE_LABEL[t]} — ${HOOK_TYPE_HINT[t]}`))
+    for (const t of HOOK_TYPES) expect(HOOK_TYPE_LABEL[t]).not.toBe(t)
   })
 
   it('E-08 (T9) — soru girişi: 4 alanla Kaydet → hata metni; 5 alanla → kaydedildi', async () => {
