@@ -1,0 +1,29 @@
+{
+  "name": "ogrenme-motoru",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Kişisel öğrenme motoru — v0 (spec v1.6 FROZEN). Vanilla TS + Vite + Dexie + ts-fsrs 5.4.2, çevrimdışı PWA.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dexie": "4.4.5",
+    "ts-fsrs": "5.4.2"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.5",
+    "jsdom": "30.0.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
