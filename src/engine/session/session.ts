@@ -2,12 +2,14 @@
 // her öğe güncel MemoryState ve now ile selectNext'ten seçilir. Geri al = tek seferlik düzeltme tekrarı (§6.5).
 import type { Attempt, DailyQueueItem, LearningAction } from '../../domain'
 import type { Clock, IdGenerator } from '../../platform/services'
-import { selectNext, type QueueContext } from '../queue/dailyQueue'
+import { buildQueue, type QueueContext } from '../queue/dailyQueue'
 
 export type NextItem =
   | { kind: 'end'; reason: 'budget' | 'empty' }
   | { kind: 'replay'; action: LearningAction; replayOfAttemptId: string }
   | { kind: 'item'; item: DailyQueueItem }
+  /** okunmuş yeni atomun ilk denemesi: okuma ekranı tekrar gösterilmez, doğrudan sunulur (BL-47) */
+  | { kind: 'firstTest'; atomId: string }
 
 /** 03 §6.5 adım 0: cevap kaydında UI'ya verilir; hedef SABİTTİR (kayan "son Attempt" yok, U-UN-08). */
 export interface UndoToken {
@@ -26,6 +28,14 @@ export interface PendingReplay {
 /** 03 §6.5: geri al yalnız kayıttan sonraki 30 saniye içinde. */
 export const UNDO_WINDOW_MS = 30_000
 
+/**
+ * BL-47 — yeni atom okunduktan HEMEN sonra sorulan soru hafızayı değil, üç saniye önce okunan cümleyi ölçer.
+ * İlk deneme, araya en az bu kadar öğe girdikten (ya da bu süre geçtikten) sonra sunulur. Oturum penceresidir,
+ * scheduler kararı DEĞİLDİR: vade yine yalnız adaptörden gelir, bu sayaçlar diske yazılmaz.
+ */
+export const FIRST_TEST_GAP_ITEMS = 2
+export const FIRST_TEST_GAP_MS = 120_000
+
 export class Session {
   readonly sessionId: string
   readonly startedAtMono: number
@@ -36,6 +46,9 @@ export class Session {
   pendingReplay: PendingReplay | null = null
   private activeAccumMs = 0
   private activeSinceMono: number | null
+  /** okunmuş ama ilk denemesi bekleyen atomlar (oturum içi, geçici) */
+  private deferredFirstTests: { atomId: string; atItem: number; atMono: number }[] = []
+  private itemsShown = 0
 
   constructor(
     private readonly ids: IdGenerator,
@@ -81,8 +94,37 @@ export class Session {
       this.pendingReplay = null
       return { kind: 'replay', action: r.action, replayOfAttemptId: r.replayOfAttemptId }
     }
-    const item = selectNext(ctx)
-    return item ? { kind: 'item', item } : { kind: 'end', reason: 'empty' }
+    // BL-47: aradaki boşluk dolduysa okunmuş atomun ilk denemesi sıraya girer (kuyruktan önce; en eski bekleyen)
+    const ripe = this.deferredFirstTests.findIndex((d) => this.itemsShown - d.atItem >= FIRST_TEST_GAP_ITEMS || this.clock.monotonicMs() - d.atMono >= FIRST_TEST_GAP_MS)
+    if (ripe >= 0) {
+      const [d] = this.deferredFirstTests.splice(ripe, 1)
+      this.itemsShown++
+      return { kind: 'firstTest', atomId: d!.atomId }
+    }
+    // bekleyen atom kuyruktan yeniden seçilmesin (yoksa okuma ekranı döngüye girer)
+    const item = buildQueue(ctx).find((q) => !this.deferredFirstTests.some((d) => d.atomId === q.atomId)) ?? null
+    if (item) {
+      this.itemsShown++
+      return { kind: 'item', item }
+    }
+    // gösterilecek başka bir şey yok: bekleyenler boşuna bekletilmez (okuyup ölçmeden oturum kapanmasın)
+    const pending = this.deferredFirstTests.shift()
+    if (pending) {
+      this.itemsShown++
+      return { kind: 'firstTest', atomId: pending.atomId }
+    }
+    return { kind: 'end', reason: 'empty' }
+  }
+
+  /** "Okudum, sına beni": ilk deneme hemen değil, araya öğe/zaman girdikten sonra sunulur (BL-47). */
+  deferFirstTest(atomId: string): void {
+    if (this.deferredFirstTests.some((d) => d.atomId === atomId)) return
+    this.deferredFirstTests.push({ atomId, atItem: this.itemsShown, atMono: this.clock.monotonicMs() })
+  }
+
+  /** oturum sonu ekranı için: kaç atom okundu ama henüz sınanmadı */
+  pendingFirstTests(): number {
+    return this.deferredFirstTests.length
   }
 
   /**

@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 318 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 322 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -33,7 +33,7 @@ Telefonda el ile kontrol listesi: `docs/PHONE_CHECK.md` (V-01…V-15, M-01…M-1
 ## Kullanım (kısaca)
 
 - **Bugün → Başla**: motor sıradaki öğeyi seçer (vadeli önce, sonra yeni). Ders/konu/mod seçilmez. `3 dk / 5 dk / 10 dk` aynı kuyrukta zaman bütçesidir.
-- **Yeni atom** önce okunur (review değildir), sonra ilk deneme gelir.
+- **Yeni atom** önce okunur (review değildir). İlk soru hemen gelmez: araya en az iki öğe ya da iki dakika girer, böylece cevabın gerçekten hatırlamayı ölçer. Gösterecek başka bir şey yoksa soru hemen gelir. Okuyup sınanmadan oturumu bırakırsan o atom bir sonraki sefer yeniden yeni olarak gelir.
 - **Soru**: seçenek → Cevapla → güven (Eminim / İki şık arasında kaldım / Salladım) → yanlışsa neden çipi → sonuç. Kayıt her zaman doğru cevabın gösteriminden önce diske yazılır.
 - **Hatırlama kartı**: soru yüzü → (Çengeli göster) → Cevabı aç → Hatırladım / Zorlandım / Hatırlayamadım.
 - **Geri al**: kayıttan sonraki 30 saniye içinde, bir kez; aynı öğe aynı sürümle bir kez yeniden sunulur. Ham kayıt silinmez, `AttemptVoid` yazılır.

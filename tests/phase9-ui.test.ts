@@ -23,6 +23,8 @@ function byText(label: string, tag = 'button'): HTMLElement {
   return el
 }
 const click = async (el: HTMLElement) => { el.click(); await flush() }
+/** BL-47: "Okudum" ilk denemeyi hemen açmaz; araya başka öğeler girer. Okuma ekranlarını geçip ölçüme ulaşır. */
+const skipReads = async () => { for (let i = 0; i < 10 && screen() === 'read'; i++) await click(byTestId('read-done')!) }
 const byTestId = (id: string) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
 const options = () => [...document.querySelectorAll<HTMLButtonElement>('button[data-option]')]
 
@@ -47,7 +49,7 @@ async function setup(opts: { withQuestion?: boolean; extraAtoms?: number } = { w
 async function toQuestion() {
   await click(byTestId('start')!)
   expect(screen()).toBe('read')
-  await click(byTestId('read-done')!)
+  await skipReads() // BL-47: ilk deneme araya öğe girdikten sonra gelir
   expect(screen()).toBe('question')
   expect(phase()).toBe('answer')
 }
@@ -69,7 +71,7 @@ describe('Phase 9 — UI akışı', () => {
     expect(screen()).toBe('read')
     expect(text()).toContain('Yeni · Tarih › Osmanlı')
     expect(text()).toContain('Tanzimat Fermanı 1839 yılında ilan edildi.')
-    await click(byTestId('read-done')!)
+    await skipReads()
     expect(screen()).toBe('question')
     expect(text()).toContain('Tanzimat Fermanı hangi yıl ilan edildi?')
   })
@@ -115,7 +117,7 @@ describe('Phase 9 — UI akışı', () => {
     expect(atts).toHaveLength(1)
     expect(atts[0]).toMatchObject({ kind: 'question', correct: false, wrongReason: 'confused', confidence: 'guess' })
     await click(byTestId('continue')!)
-    expect(screen()).toBe('read') // sonraki öğe (ek atom yeni)
+    expect(['read', 'recall', 'question']).toContain(screen()) // sonraki öğe: ek atomun okuması ya da bekleyen ilk deneme
   })
 
   it('E-05 — doğru → Devam → sonraki öğe', async () => {
@@ -124,7 +126,7 @@ describe('Phase 9 — UI akışı', () => {
     await click(options()[0]!); await click(byTestId('answer')!); await click(byTestId('conf-sure')!)
     expect(text()).toContain('Doğru.')
     await click(byTestId('continue')!)
-    expect(screen()).toBe('read')
+    expect(['read', 'recall', 'question']).toContain(screen())
   })
 
   it('E-06 — geri al: Sonuç → Geri al (30 sn içinde) → aynı soru aynı sürüm bir kez yeniden; deneme sayısı aynı, geri alma +1; 30 sn sonra düğme yok; kartta kısa ömürlü çubuk', async () => {
@@ -147,8 +149,8 @@ describe('Phase 9 — UI akışı', () => {
     expect(byTestId('undo')).toBeNull()
     await click(byTestId('continue')!)
     // kart akışı: ek atom yeni → oku → kart (sorusu yok)
-    expect(screen()).toBe('read')
-    await click(byTestId('read-done')!)
+    expect(['read', 'recall', 'question']).toContain(screen())
+    await skipReads()
     expect(screen()).toBe('recall')
     await click(byTestId('reveal')!)
     await click(byTestId('sa-good')!)
@@ -183,7 +185,7 @@ describe('Phase 9 — UI akışı', () => {
   it('E-07 — kart akışı: Çengeli göster → Cevabı aç → Hatırladım → sonraki; support = hook', async () => {
     const { repo } = await setup({ withQuestion: false, extraAtoms: 1 })
     await click(byTestId('start')!)
-    await click(byTestId('read-done')!)
+    await skipReads()
     expect(screen()).toBe('recall')
     expect(text()).toContain('Tanzimat Fermanı hangi yıl ilan edildi?')
     expect(text()).not.toContain('Tanzimat Fermanı 1839') // cevap gizli
@@ -194,13 +196,13 @@ describe('Phase 9 — UI akışı', () => {
     await click(byTestId('sa-good')!)
     const atts = await repo.listAttempts()
     expect(atts[0]).toMatchObject({ kind: 'recall', support: 'hook', selfAssessment: 'good' })
-    expect(screen()).toBe('read') // sonraki öğe
+    expect(['read', 'recall', 'question']).toContain(screen()) // sonraki öğe (bekleyen ilk deneme de olabilir)
   })
 
   it('Çengel türü etiketleri Türkçe: kart/içerikte "Mantık"; formda seçenek metni Türkçe + ipucu, değer enum kalır', async () => {
     await setup({ withQuestion: false, extraAtoms: 1 })
     await click(byTestId('start')!)
-    await click(byTestId('read-done')!)
+    await skipReads()
     expect(screen()).toBe('recall')
     await click(byTestId('show-hook')!)
     expect(document.querySelector('.hook-type')!.textContent).toBe('Mantık')
@@ -241,7 +243,7 @@ describe('Phase 9 — UI akışı', () => {
     const { clock } = await setup({ withQuestion: true, extraAtoms: 3 })
     await click(byTestId('start-3')!)
     expect(screen()).toBe('read')
-    await click(byTestId('read-done')!)
+    await skipReads()
     clock.advance(3 * MIN + 1000)
     await click(options()[0]!); await click(byTestId('answer')!); await click(byTestId('conf-sure')!)
     expect(phase()).toBe('result') // aktif öğe tamamlanır
@@ -325,7 +327,7 @@ describe('Phase 9 — UI akışı', () => {
     const { clock, repo } = await setup({ withQuestion: false })
     clock.wallMs += 30 * DAY // cihaz saati ileri
     await click(byTestId('start')!)
-    await click(byTestId('read-done')!)
+    await skipReads()
     await click(byTestId('reveal')!)
     await click(byTestId('sa-good')!)
     clock.wallMs -= 30 * DAY // saat düzeltildi

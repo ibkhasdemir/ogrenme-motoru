@@ -243,6 +243,7 @@ export class Motor {
     const n = session.nextItem(ctx)
     if (n.kind === 'end') return { kind: 'end', reason: n.reason, dueSoon: this.dueSoonCount(ctx) }
     const c = await this.content()
+    if (n.kind === 'firstTest') return this.presentAtom(n.atomId) // BL-47: okuma ekranı tekrar gösterilmez
     if (n.kind === 'replay') return this.present(n.action, c, n.replayOfAttemptId)
     const atom = c.atoms.find((a) => a.id === n.item.atomId)
     if (!atom) throw new MotorError(`Atom bulunamadı: ${n.item.atomId}`)

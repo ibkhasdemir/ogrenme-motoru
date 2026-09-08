@@ -24,7 +24,7 @@ export type Screen =
   | { name: 'read'; pres: Extract<Presentation, { kind: 'read' }> }
   | { name: 'question'; pres: Extract<Presentation, { kind: 'question' }>; phase: 'answer' | 'confidence' | 'reason' | 'result'; initial: string | null; selected: string | null; shownAtMono: number; confidence: Confidence | null; correct: boolean | null; token: UndoToken | null }
   | { name: 'recall'; pres: Extract<Presentation, { kind: 'recall' }>; phase: 'prompt' | 'revealed'; hookShown: boolean; shownAtMono: number; revealAtMono: number | null }
-  | { name: 'end'; reason: 'budget' | 'empty'; dueSoon: number; sessionCount: number }
+  | { name: 'end'; reason: 'budget' | 'empty'; dueSoon: number; sessionCount: number; pendingFirstTests: number }
   | { name: 'atomForm' }
   | { name: 'questionForm'; presetAtomId?: string; presetText?: string }
   | { name: 'content'; view: ContentView }
@@ -181,7 +181,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   async function showPresentation(pres: Presentation): Promise<void> {
     switch (pres.kind) {
       case 'end':
-        return ctx.navigate({ name: 'end', reason: pres.reason, dueSoon: pres.dueSoon, sessionCount })
+        return ctx.navigate({ name: 'end', reason: pres.reason, dueSoon: pres.dueSoon, sessionCount, pendingFirstTests: session?.pendingFirstTests() ?? 0 })
       case 'read':
         return ctx.navigate({ name: 'read', pres })
       case 'question':
@@ -391,7 +391,11 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       crumb(s.pres, 'Yeni'),
       atomExplanation(s.pres),
       h('div', { class: 'screen-bottom' },
-        button('Okudum, sına beni', async () => { const p = await motor.presentAtom(s.pres.atom.id); await showPresentation(p) }, { variant: 'primary', testid: 'read-done' }),
+        // BL-47: "Okudum" ilk denemeyi hemen açmaz; araya birkaç öğe girer, soru gerçek hatırlamayı ölçer
+        button('Okudum', async () => {
+          session?.deferFirstTest(s.pres.atom.id)
+          await nextItem()
+        }, { variant: 'primary', testid: 'read-done' }),
         button("Bugün'e dön", () => void leaveToToday(), { variant: 'quiet' }),
       ),
     )
@@ -561,6 +565,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     const summary = await motor.today()
     return h('div', { class: 'screen', 'data-screen': 'end' },
       h('p', { class: 'text-display' }, s.reason === 'budget' ? 'Süre doldu.' : 'Bugünlük bu kadar.'),
+      s.pendingFirstTests > 0 ? h('p', { class: 'text-support', 'data-testid': 'pending-first' }, `${s.pendingFirstTests} yeni atomu okudun ama henüz sınanmadın; bir sonraki oturumda yeniden gelecekler.`) : null,
       h('p', { class: 'text-body' }, `Bu oturum: ${s.sessionCount} · Bugün toplam: ${summary.counts.doneToday}`),
       s.dueSoon > 0 ? h('p', { class: 'text-support' }, `${s.dueSoon} atom 15 dakika içinde yeniden gelecek (öğrenme adımı).`) : null,
       h('div', { class: 'screen-bottom' }, button("Bugün'e dön", () => void leaveToToday(), { variant: 'primary', testid: 'to-today' })),

@@ -69,7 +69,7 @@ describe('E-18 — güncelleme çubuğu yeri', () => {
     await click(byTestId('start')!)
     expect(screen()).toBe('read')
     expect(byTestId('update-bar')).toBeNull() // çalışma ekranında yok
-    await click(byTestId('read-done')!)
+    while (screen() === 'read') await click(byTestId('read-done')!) // BL-47: okuma sonrası ölçüm araya öğe girince gelir
     expect(byTestId('update-bar')).toBeNull()
     await click(byText("Bugün'e dön"))
     expect(byTestId('update-bar')).not.toBeNull()

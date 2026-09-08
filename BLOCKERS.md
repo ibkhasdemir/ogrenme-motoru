@@ -128,6 +128,14 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Depo: `unarchiveAtom`, `deleteAtomAndHooks` (atom + çengelleri, tek transaction). Ham olay silen bir API YOKTUR.
 - Durum: **KAPANDI**. Testler: `tests/phase17-archive-delete.test.ts`.
 
+### BL-47 — Yeni atomda okuma ile ilk deneme arasına boşluk
+- Bölüm: `00` A11 / §3 ("Yeni atomu okuma ekranı, ardından ilk deneme"), `07` S2 (`Okudum, sına beni` → resolve), `03` §6.2, §3.4 kural 8.
+- Gözlem (2026-09-09, kullanıcı): "Konu veriyor hemen ardından soru… konunun hemen sonrasında soruyu elbette doğru yaparım." Doğru tespit: okuduktan üç saniye sonra sorulan soru dayanıklı hafızayı değil çalışma belleğini ölçer; kullanıcı "Eminim + doğru" der, FSRS ilk aralığı hak edilenden uzun açar.
+- Karar: akış korunur (önce okuma, sonra ilk deneme) ama **araya boşluk girer**: ilk deneme en az `FIRST_TEST_GAP_ITEMS` (2) öğe ya da `FIRST_TEST_GAP_MS` (2 dk) sonra sunulur. Gösterilecek başka öğe yoksa hemen sunulur (boş bekleme yok). Bekleyen atom kuyruktan yeniden seçilmez (okuma döngüsü olmaz). Bütçe dolarsa okunmuş ama sınanmamış atom `started` sayılmaz ve ertesi çağrıda yeniden `new` gelir (`03` §3.4 kural 8 zaten böyle diyor); oturum sonu ekranı bunu söyler.
+- Sınır: bu bir oturum penceresidir, scheduler kararı değildir. Sayaçlar diske yazılmaz, `due` yine yalnız adaptörden gelir; `08` U-SC-14 taraması korunur.
+- Alternatifler (değerlendirildi, seçilmedi): oturumu "önce hepsini oku, sonra hepsini çöz" diye ikiye bölmek (3 dk'lık mikro modu bozar, on atomu peş peşe okutur); ilk cevabı `pretest` sayıp ölçüme katmamak (bilgi çöpe gider).
+- Durum: **KAPANDI**. Testler: `tests/phase18-first-test-gap.test.ts`.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).
