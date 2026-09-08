@@ -29,6 +29,8 @@ export interface MotorDeps {
   ids: IdGenerator
   /** her yazmadan önce (günün ilk değişikliğinde daily kurtarma noktası, 06 §9); hatası yazmayı engellemez */
   beforeWrite?: () => Promise<void>
+  /** depo okuma anomalisinde (sequence geriledi / olay varken içerik boş) bağlantıyı yenile (ör. Dexie kapat+aç); bir kez denenir */
+  recoverStorage?: () => Promise<void>
 }
 
 export interface ContentCache {
@@ -96,6 +98,14 @@ export class MotorError extends Error {
   }
 }
 
+/** A21 / 06 §5: depo bilinen durumdan geriye okunuyor; bellek korunur, hiçbir şey yazılmaz. Kullanıcıya açık mesaj. */
+export class StorageReadAnomalyError extends Error {
+  constructor(detail: string) {
+    super(`Depo geçici olarak okunamadı (${detail}). Verin silinmedi; uygulamayı tamamen kapatıp yeniden aç.`)
+    this.name = 'StorageReadAnomalyError'
+  }
+}
+
 export class Motor {
   memory: Memory = new Map()
   policy!: EvidencePolicy
@@ -111,10 +121,11 @@ export class Motor {
     readonly clock: Clock,
     readonly ids: IdGenerator,
     private readonly beforeWriteHook?: () => Promise<void>,
+    private readonly recoverStorageHook?: () => Promise<void>,
   ) {}
 
   static async create(deps: MotorDeps): Promise<Motor> {
-    const m = new Motor(deps.repo, deps.clock, deps.ids, deps.beforeWrite)
+    const m = new Motor(deps.repo, deps.clock, deps.ids, deps.beforeWrite, deps.recoverStorage)
     await m.refresh()
     return m
   }
@@ -141,18 +152,48 @@ export class Motor {
     this.lastKnownSequence = (await this.repo.nextSequence()) - 1
   }
 
-  /** 06 §5 çoklu bağlam: meta.sequence bilinenden büyükse olaylar yeniden yüklenir ve REBUILD yapılır (I-21). */
+  /**
+   * 06 §5 çoklu bağlam: meta.sequence bilinenden büyükse olaylar yeniden yüklenir ve REBUILD yapılır (I-21).
+   * Aynı depoda sequence geri gitmez (yalnız eklenir). Gerileme = okuma anomalisi (iPhone bulgusu: arka plandan dönüşte IndexedDB
+   * boş/eski okundu, ekran 0/0/0 oldu) ya da başka bağlamda geri yükleme. Bellek korunur; depo yeniden açılıp bir kez daha okunur,
+   * yine geriyse açık hata — sessizce boş REBUILD yapılmaz (A21).
+   */
   async checkExternalChanges(): Promise<boolean> {
-    const seq = (await this.repo.nextSequence()) - 1
+    let seq = (await this.repo.nextSequence()) - 1
+    if (seq < this.lastKnownSequence) {
+      await this.recoverStorage()
+      seq = (await this.repo.nextSequence()) - 1
+      if (seq < this.lastKnownSequence) throw new StorageReadAnomalyError(`kayıt sırası ${seq} < bilinen ${this.lastKnownSequence}`)
+    }
     if (seq === this.lastKnownSequence) return false
     await this.refresh()
     return true
   }
 
+  private async recoverStorage(): Promise<void> {
+    if (!this.recoverStorageHook) return
+    try {
+      await this.recoverStorageHook()
+    } catch {
+      // yeniden açma başarısızsa ikinci okuma karar verir
+    }
+  }
+
   listAttempts(): readonly Attempt[] { return this.attempts }
   listVoids(): readonly AttemptVoid[] { return this.voids }
 
+  /** Attempt atoma bağlıdır ve atom silinmez (yalnız arşivlenir): olay varken atom listesi boş okunamaz → okuma anomalisi (aynı kural). */
   async content(): Promise<ContentCache> {
+    let c = await this.readContent()
+    if (!c.atoms.length && this.attempts.length) {
+      await this.recoverStorage()
+      c = await this.readContent()
+      if (!c.atoms.length) throw new StorageReadAnomalyError(`${this.attempts.length} öğrenme kaydı var, atom listesi boş okundu`)
+    }
+    return c
+  }
+
+  private async readContent(): Promise<ContentCache> {
     const [subjects, topics, atoms, hooks, questions] = await Promise.all([
       this.repo.listSubjects(), this.repo.listTopics(), this.repo.listAtoms(), this.repo.listHooks(), this.repo.listQuestions(),
     ])

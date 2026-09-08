@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 237 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 242 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -25,7 +25,8 @@ PWA için HTTPS (veya localhost) gerekir.
 2. Telefonda tarayıcıdan adresi aç. İlk açılışta service worker o build'in **tüm** varlıklarını önbelleğe alır.
 3. **iPhone:** Safari → Paylaş → "Ana Ekrana Ekle". **Android:** Chrome → menü → "Ana ekrana ekle / Uygulamayı yükle".
 4. Ana ekrandan açılış standalone'dır; uçak modunda tam döngü çalışır.
-5. Yeni sürüm yayımlandığında: uygulama arka planda indirir, bitince Bugün/Veri ekranında "Yeni sürüm hazır · Yenile" çıkar. Yenile'ye basmazsan çalışan oturum değişmez; tüm sekmeler kapanıp yeniden açılınca yeni sürüm gelir. Güncelleme kullanıcı verisine dokunmaz.
+5. Yeni sürüm yayımlandığında: uygulama arka planda indirir (açılışta ve uygulama öne gelince denetler), bitince Bugün/Veri ekranında "Yeni sürüm hazır · Yenile" çıkar. Yenile'ye basmazsan çalışan oturum değişmez; tüm sekmeler kapanıp yeniden açılınca yeni sürüm gelir. Güncelleme kullanıcı verisine dokunmaz.
+6. **iPhone notu:** Safari sekmesi ile ana ekran uygulaması **ayrı** veri tutar ve ayrı güncellenir. İkonu silip yeniden eklemek yeni, **boş** bir uygulama oluşturur; eski ikonun verisi onunla gider. Tek ikon kullan; güncelleme ikonun içinde gelir, ikonu yeniden ekleme. Bir cihazdan diğerine (ya da Safari ↔ ikon) veri taşımanın tek yolu yedek dosyasıdır.
 
 Telefonda el ile kontrol listesi: `docs/PHONE_CHECK.md` (V-01…V-15, M-01…M-10, M-UP-01…08).
 

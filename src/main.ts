@@ -55,7 +55,7 @@ async function boot(): Promise<void> {
       return
     }
     await ensurePostMigrationPoint(baseDeps).catch((e) => console.warn('post_migration noktası alınamadı', e))
-    const motor = await Motor.create({ repo, clock, ids, beforeWrite: () => ensureDailyPoint(baseDeps).then(() => undefined) })
+    const motor = await Motor.create({ repo, clock, ids, beforeWrite: () => ensureDailyPoint(baseDeps).then(() => undefined), recoverStorage: () => repo.reopen() })
     const updates = createUpdateController()
     void registerServiceWorker(updates) // 13 §7: arka planda; çekirdek yolu ağ beklemez
     const app = mountApp(root, {
@@ -71,7 +71,11 @@ async function boot(): Promise<void> {
     document.addEventListener('visibilitychange', () => {
       const visible = document.visibilityState === 'visible'
       app.setVisible(visible)
-      if (visible) void motor.checkExternalChanges().then((changed) => { if (changed) void app.render() })
+      if (!visible) return
+      // iOS ana ekran uygulaması sayfayı yeniden yüklemeden sürdürür: yeni sürüm denetimi burada da yapılır (13 §7; en az 60 s arayla)
+      void updates.check()
+      // 06 §5: dış değişiklik → REBUILD; okuma anomalisi → render hatayı gösterir, bellek/veri değişmez
+      void motor.checkExternalChanges().then((changed) => { if (changed) void app.render() }).catch(() => app.render())
     })
   } catch (e) {
     // 13 §6.2 / §6.5: normal açılış başarısız → yazma kapalı kurtarma ekranı (kurtarma okuyucusu ile yedek / döküm)

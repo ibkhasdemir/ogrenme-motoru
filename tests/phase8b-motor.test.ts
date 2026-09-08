@@ -2,7 +2,7 @@ import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { QuestionAttempt } from '../src/domain'
 import { EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1 } from '../src/domain'
-import { Motor, type Presentation } from '../src/app/motor'
+import { Motor, StorageReadAnomalyError, type Presentation } from '../src/app/motor'
 import { computeChecksum } from '../src/engine/backup/checksum'
 import { dryRunRebuild, normalizeSnapshot } from '../src/engine/backup/dryRun'
 import { BACKUP_FORMAT_VERSION, type BackupFile } from '../src/engine/backup/types'
@@ -251,5 +251,58 @@ describe('Motor cephesi', () => {
         repoA.close(); repoB.close()
       }
     })
+  })
+})
+
+describe('Depo okuma anomalisi — iPhone bulgusu 2026-09-08 (yedek sonrası Bugün 0/0/0; veri diskte duruyordu)', () => {
+  class GlitchRepo extends MemoryRepository {
+    seqGlitches = 0
+    contentGlitches = 0
+    override async nextSequence() { if (this.seqGlitches > 0) { this.seqGlitches--; return 1 } return super.nextSequence() }
+    override async listAtoms() { if (this.contentGlitches > 0) { this.contentGlitches--; return [] } return super.listAtoms() }
+  }
+  async function glitchMotor() {
+    const repo = new GlitchRepo(fakeIds('gen'))
+    let recovered = 0
+    const motor = await Motor.create({ repo, clock: new FakeClock(), ids: fakeIds('id'), recoverStorage: async () => { recovered++ } })
+    const atom = await motor.addAtom({ subjectName: 'S', topicName: 'T', text: 'Atom.', prompt: 'Atom?' })
+    const session = motor.startSession(null)
+    await motor.next(session)
+    const pres = (await motor.presentAtom(atom.id)) as Extract<Presentation, { kind: 'recall' }>
+    await motor.answerRecall(session, pres, { selfAssessment: 'good', hookShown: false, responseTimeMs: 100 })
+    return { repo, motor, recovered: () => recovered }
+  }
+
+  it('tek seferlik gerileyen sequence: recoverStorage bir kez, ikinci okuma düzgün → değişiklik yok, bellek aynı', async () => {
+    const { repo, motor, recovered } = await glitchMotor()
+    const before = serializeMemory(motor.memory)
+    repo.seqGlitches = 1
+    expect(await motor.checkExternalChanges()).toBe(false)
+    expect(recovered()).toBe(1)
+    expect(serializeMemory(motor.memory)).toBe(before)
+  })
+
+  it('kalıcı gerileme: StorageReadAnomalyError; bellek ve olaylar korunur; sessiz boş REBUILD yok; düzelince normal', async () => {
+    const { repo, motor } = await glitchMotor()
+    const before = serializeMemory(motor.memory)
+    repo.seqGlitches = 2
+    await expect(motor.checkExternalChanges()).rejects.toBeInstanceOf(StorageReadAnomalyError)
+    expect(serializeMemory(motor.memory)).toBe(before)
+    expect(motor.listAttempts()).toHaveLength(1)
+    repo.seqGlitches = 2
+    await expect(motor.today()).rejects.toThrow(/Verin silinmedi/)
+    const t = await motor.today()
+    expect(t.counts.doneToday).toBe(1)
+  })
+
+  it('olay varken atom listesi boş okunursa: yeniden aç + tekrar oku → sayılar doğru; hâlâ boşsa hata (0/0/0 gösterilmez)', async () => {
+    const { repo, motor, recovered } = await glitchMotor()
+    repo.contentGlitches = 1
+    const t = await motor.today()
+    expect(recovered()).toBe(1)
+    expect(t.counts.doneToday).toBe(1)
+    repo.contentGlitches = 2
+    await expect(motor.today()).rejects.toBeInstanceOf(StorageReadAnomalyError)
+    expect(motor.listAttempts()).toHaveLength(1)
   })
 })

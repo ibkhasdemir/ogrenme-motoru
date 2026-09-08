@@ -76,6 +76,12 @@ export class DexieRepository implements Repository {
     this.db.close()
   }
 
+  /** Okuma anomalisinde (Motor.recoverStorage) bağlantı yenilenir: kapat + aç. Şema aynı, migration koşmaz, veri değişmez. */
+  async reopen(): Promise<void> {
+    this.db.close({ disableAutoOpen: false })
+    await this.db.open()
+  }
+
   private async ensureDefaults(): Promise<void> {
     await this.db.transaction('rw', this.db.meta, this.db.config, async () => {
       const defaults = defaultMeta(this.ids.newId())

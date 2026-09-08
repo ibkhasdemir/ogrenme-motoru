@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { renderServiceWorker } from '../build/swPlugin'
 import { Motor } from '../src/app/motor'
-import { createUpdateController } from '../src/pwa/register'
+import { UPDATE_CHECK_MIN_INTERVAL_MS, bindUpdateCheck, createUpdateController } from '../src/pwa/register'
 import { MemoryRepository } from '../src/store/memory/memoryRepository'
 import { mountApp, type AppHandle } from '../src/ui/app'
 import { FakeClock, fakeIds } from './helpers/engineFixture'
@@ -77,5 +77,28 @@ describe('E-18 — güncelleme çubuğu yeri', () => {
     expect(byTestId('update-bar')).not.toBeNull()
     await click(byTestId('update-apply')!)
     expect(applied).toBe(1) // yalnız bu istemci, bir kez
+  })
+})
+
+describe('Güncelleme denetimi — iPhone bulgusu 2026-09-08: ana ekran uygulaması sayfayı yeniden yüklemeden sürdürür, çubuk hiç çıkmadı', () => {
+  it('bindUpdateCheck: ilk çağrı update() çağırır; 60 s içinde tekrar çağırmaz; süre dolunca çağırır; update hatası sessiz', async () => {
+    const c = createUpdateController()
+    let t = 1_000_000
+    let calls = 0
+    let fail = false
+    bindUpdateCheck(c, async () => { calls++; if (fail) throw new Error('offline') }, () => t)
+    await c.check(); expect(calls).toBe(1)
+    t += 30_000; await c.check(); expect(calls).toBe(1)
+    t += 30_000; await c.check(); expect(calls).toBe(2)
+    t += UPDATE_CHECK_MIN_INTERVAL_MS; fail = true
+    await expect(c.check()).resolves.toBeUndefined(); expect(calls).toBe(3)
+  })
+
+  it('main.ts: görünürlük kazanınca updates.check(); depo anomalisi hatası render ile ekrana düşer; Dexie yeniden açma bağlı', () => {
+    const src = readFileSync(join(ROOT, 'src/main.ts'), 'utf8')
+    expect(src).toContain("addEventListener('visibilitychange'")
+    expect(src).toContain('updates.check()')
+    expect(src).toContain('.catch(() => app.render())')
+    expect(src).toContain('recoverStorage: () => repo.reopen()')
   })
 })
