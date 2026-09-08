@@ -44,10 +44,10 @@ describe('06 §6.2 — migration 1 → 2', () => {
       expect((await repo.listRevisions('q-1')).map((r) => r.version)).toEqual([1])
       expect((await repo.listRevisions('q-2')).map((r) => r.version)).toEqual([1, 2, 3])
       // Phase 6 cümlesi: REBUILD migration öncesiyle eşit (ham olaylar değişmediği için A4 korunur)
-      const before = rebuild(fx.attempts as Attempt[], [], EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
-      const after = rebuild(await repo.listAttempts(), await repo.listVoids(), EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
-      expect(serializeMemory(after.memory)).toBe(serializeMemory(before.memory))
-      expect(after.memory.size).toBe(3)
+      const memBefore = rebuild(fx.attempts as Attempt[], [], EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+      const memAfter = rebuild(await repo.listAttempts(), await repo.listVoids(), EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+      expect(serializeMemory(memAfter.memory)).toBe(serializeMemory(memBefore.memory))
+      expect(memAfter.memory.size).toBe(3)
     } finally {
       repo.close()
     }
