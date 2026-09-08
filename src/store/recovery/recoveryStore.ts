@@ -103,8 +103,12 @@ export class DexieRecoveryStore implements RecoveryStore {
     if (n === 0) throw new Error(`Kurtarma noktası bulunamadı: ${id}`)
   }
 
+  /** İş bitince pinler kalkar ve retention normal uygulanır (06 §9, B-34). */
   async unpinJob(jobId: string): Promise<void> {
-    await this.db.snapshots.where('pinnedBy').equals(jobId).modify({ pinnedBy: null })
+    await this.db.transaction('rw', this.db.snapshots, async () => {
+      await this.db.snapshots.where('pinnedBy').equals(jobId).modify({ pinnedBy: null })
+      await this.applyRetentionTx()
+    })
   }
 
   private async putWithRetention(record: RecoveryPointRecord): Promise<void> {

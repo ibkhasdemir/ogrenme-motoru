@@ -72,6 +72,11 @@ export function migrateBackup1to2(file: BackupFile, now: string): BackupFile {
     }
     revisions.push(rev)
   }
+  // 01 §2.7: her soru için tam bir QuestionAtom(primary); format-1 paketinde yoksa güncel primaryAtomId'den kurulur
+  const qas = [...(file.content.questionAtoms ?? [])]
+  for (const q of questions) {
+    if (!qas.some((qa) => qa.questionId === q.id && qa.role === 'primary')) qas.push({ questionId: q.id, atomId: q.primaryAtomId, role: 'primary' })
+  }
   const { checksum: _ck, ...rest } = file
   return {
     ...rest,
@@ -86,7 +91,7 @@ export function migrateBackup1to2(file: BackupFile, now: string): BackupFile {
       inbox: file.content.inbox ?? [],
       atomRelations: file.content.atomRelations ?? [],
       optionAtoms: file.content.optionAtoms ?? [],
-      questionAtoms: file.content.questionAtoms ?? [],
+      questionAtoms: qas,
       hooks: file.content.hooks ?? [],
     },
     // format 1'de checksum yoktur; migrate edilmiş paket hash taşımaz (orijinal hash gelen dosyayı sınamak içindir)
