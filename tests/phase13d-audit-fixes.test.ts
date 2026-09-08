@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { applyContentImport } from '../src/app/contentImport'
 import { Motor } from '../src/app/motor'
 import { parseContentImport, parseLooseJson, planContentImport, unitWarning } from '../src/engine/import/contentImport'
+import { buildPrompt } from '../src/ui/contentImport'
 import { MemoryRepository } from '../src/store/memory/memoryRepository'
 import { mountApp, type AppHandle } from '../src/ui/app'
 
@@ -188,5 +189,55 @@ describe('Arayüz — denetim bulguları', () => {
     expect(document.activeElement).toBe(after)
     expect(after.value).toBe('Lale')
     expect(after.selectionStart).toBe(4)
+  })
+})
+
+describe('Toplu seçim ve ünite kuralı (kullanıcı: "hepsi 18. yy ama yz yine dağıttı")', () => {
+  let handle2: AppHandle | null = null
+  let root2: HTMLDivElement
+  beforeEach(() => { root2 = document.createElement('div'); document.body.appendChild(root2) })
+  afterEach(() => { handle2?.destroy(); handle2 = null; document.body.replaceChildren() })
+
+  it('Tümünü seç → ünite yaz → taşı: 6 konu tek dokunuşla tek ünite altına girer', async () => {
+    const konular = ['Karlofça', 'Prut', 'Pasarofça', 'Belgrad', 'Küçük Kaynarca', 'Aynalıkavak']
+    const { motor } = await motorWith(konular.map((k) => ({ konu: k, text: `${k} atomu.` })))
+    handle2 = mountApp(root2, { motor, appVersion: '0.2.0' })
+    await flush()
+    await click(byText('İçerik'))
+    await click(byTestId('to-topics')!)
+    expect(document.body.textContent).toContain('6 konu var. Hepsi aynı ünitedense')
+    expect((byTestId('clear-topics') as HTMLButtonElement).disabled).toBe(true)
+    await click(byTestId('select-all-topics')!)
+    expect(byTestId('topic-selection')!.textContent).toBe('6 konu seçili')
+    expect((byTestId('select-all-topics') as HTMLButtonElement).disabled).toBe(true) // hepsi seçili
+    const u = document.querySelector<HTMLInputElement>('input[aria-label="Ünite adı"]')!
+    u.value = '18. yy Osmanlı'
+    u.dispatchEvent(new Event('input'))
+    await flush()
+    await click(byTestId('move-topics')!)
+    const c = await motor.content()
+    expect(c.topics.map((t) => t.name).sort()).toEqual(konular.map((k) => `18. yy Osmanlı › ${k}`).sort())
+    await click(byText('← İçerik'))
+    expect(document.querySelectorAll('details[data-group]')).toHaveLength(1)
+    expect(document.body.textContent).toContain('6 atom · 1 ünite')
+  })
+
+  it('Seçimi temizle hepsini bırakır; ünite şablona zorunlu kural olarak girer', async () => {
+    const { motor } = await motorWith([{ konu: 'A', text: 'Atom A.' }, { konu: 'B', text: 'Atom B.' }])
+    handle2 = mountApp(root2, { motor, appVersion: '0.2.0' })
+    await flush()
+    await click(byText('İçerik'))
+    await click(byTestId('to-topics')!)
+    await click(byTestId('select-all-topics')!)
+    expect(byTestId('topic-selection')!.textContent).toBe('2 konu seçili')
+    await click(byTestId('clear-topics')!)
+    expect(byTestId('topic-selection')!.textContent).toBe('0 konu seçili')
+    expect([...document.querySelectorAll<HTMLInputElement>('.topic-row input[type=checkbox]')].some((c) => c.checked)).toBe(false)
+    // şablon: ünite verilince yapay zekâya zorunlu kural olarak yazılır
+    const withUnit = buildPrompt('', '18. yy Osmanlı')
+    expect(withUnit).toContain('ZORUNLU')
+    expect(withUnit).toContain('"konu" alanı tam olarak "18. yy Osmanlı" olacak')
+    expect(buildPrompt('', '')).not.toContain('ZORUNLU')
+    expect(buildPrompt('Notum', '18. yy Osmanlı')).toContain('Notum')
   })
 })

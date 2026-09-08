@@ -53,10 +53,20 @@ Notlar:
 
 export const NOTES_PLACEHOLDER = '(buraya yapıştır)'
 
-/** Şablon + kullanıcının notu tek parça: paylaşınca sohbete ikinci bir yapıştırma gerekmez. */
-export function buildPrompt(notes: string): string {
+/**
+ * Şablon + kullanıcının notu tek parça: paylaşınca sohbete ikinci bir yapıştırma gerekmez.
+ * Ünite verilmişse yapay zekâya zorunlu kural olarak yazılır — telefon bulgusu: model ünite seviyesini kendiliğinden atlayıp
+ * her olayı ayrı "konu" yapıyor. Ünite burada söylenince ilk seferde doğru dizin çıkıyor.
+ */
+export function buildPrompt(notes: string, unit = ''): string {
+  const u = unit.trim()
+  let out = IMPORT_PROMPT_TEMPLATE
+  if (u) {
+    out = out.replace('Kurallar:', `Kurallar:
+- ZORUNLU: bu notların tamamı tek bir üniteye aittir. Her atomda "konu" alanı tam olarak "${u}" olacak; başka bir değer yazma. Ayrıntıyı "altbaslik" alanına yaz.`)
+  }
   const n = notes.trim()
-  return n ? IMPORT_PROMPT_TEMPLATE.replace(NOTES_PLACEHOLDER, n) : IMPORT_PROMPT_TEMPLATE
+  return n ? out.replace(NOTES_PLACEHOLDER, n) : out
 }
 
 async function existingContent(ctx: AppContext): Promise<ExistingContent> {
@@ -139,7 +149,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   }
   const copyTemplate = async () => {
     try {
-      await navigator.clipboard.writeText(buildPrompt(state.notes))
+      await navigator.clipboard.writeText(buildPrompt(state.notes, state.unit))
       ctx.notice(state.notes.trim() ? "Şablon + notların kopyalandı. Yapay zekâ sohbetine yapıştır, çıkan JSON'u buraya getir." : "Şablon kopyalandı. Yapay zekâ sohbetine yapıştır, notlarını ekle, çıkan JSON'u buraya getir.", 'ok')
     } catch {
       ctx.notice('Kopyalanamadı; "Şablonu göster" ile elle seç.', 'error')
@@ -148,7 +158,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   }
   const shareTemplate = async () => {
     try {
-      await (navigator as ShareNav).share!({ text: buildPrompt(state.notes), title: 'Öğrenme Motoru şablonu' })
+      await (navigator as ShareNav).share!({ text: buildPrompt(state.notes, state.unit), title: 'Öğrenme Motoru şablonu' })
     } catch {
       // vazgeçildi ya da desteklenmiyor; sessiz
     }
@@ -184,6 +194,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   return h('div', { class: 'screen', 'data-screen': 'import' },
     h('div', { class: 'row' }, button('← İçerik', toList, { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik içe aktar')),
     h('p', { class: 'text-support' }, "1) Ders notunu aşağıya yapıştır, Şablonu paylaş (ya da kopyala) → yapay zekâ sohbeti. 2) Çıkan JSON'u kopyala. 3) Burada Panodan yapıştır → Önizle → Ekle. Yalnız ekler; mevcut içerik ve öğrenme geçmişi değişmez."),
+    field('Ünite (tümü bunun altına konur)', unitIn, 'Notların tek üniteye aitse adını yaz: şablonda yapay zekâya kural olarak gider ve gelen içerik bu ünitenin altına konur.'),
     h('div', { class: 'row' },
       canShareText() ? button('Şablonu paylaş', () => void shareTemplate(), { class: 'btn-inline', testid: 'share-template' }) : null,
       button('Şablonu kopyala', () => void copyTemplate(), { class: 'btn-inline', testid: 'copy-template' }),
@@ -195,7 +206,6 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
       services?.files ? button('Dosya seç', () => void pickFile(), { class: 'btn-inline', testid: 'pick-import' }) : null,
     ),
     textIn,
-    field('Ünite (tümü bunun altına konur)', unitIn, 'Yapay zekâ her olayı ayrı konu yaptıysa buraya ünite adını yaz; konular onun alt başlığı olur.'),
     button('Önizle', () => void preview(), { testid: 'preview-import' }),
     state.error ? h('div', { class: 'notice notice-error', role: 'alert', 'data-testid': 'import-error' }, state.error) : null,
     plan ? renderPlan(plan) : null,

@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 275 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 277 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -61,9 +61,10 @@ Atom ve soruları tek tek yazmak yerine JSON olarak ekle (BL-38; spec dışı, s
 2. Çıkan JSON'u kopyala → uygulamada **Panodan yapıştır** (ya da kutuya elle yapıştır / `.json` dosyası seç) → **Önizle** → "N atom, M soru eklenecek" → **Ekle**. Yapay zekâ çıktısı ```json çitli ya da açıklamalı gelse de okunur; yalnız sarmalayıcı temizlenir, veri "düzeltilmez".
 3. Yalnız ekler: mevcut içerik ve öğrenme geçmişi değişmez. Aynı metinli atom varsa yeniden eklenmez; o atomun soruları ve çengelleri (satır içi `cengel` dâhil) mevcut atoma bağlanır. Tek bir hatalı öğe varsa hiçbir şey eklenmez; hata listesi hangi öğe olduğunu söyler. Kurtarma deposu bağlıysa önce `pre_import` kurtarma noktası alınır.
 4. **Dizin:** `konu` ünite düzeyidir ve bir ders notu boyunca aynı kalır ("18. yy Osmanlı"); ayrıntı `altbaslik` alanına gider ("Küçük Kaynarca Antlaşması"). Uygulama bunu "Ünite › Alt başlık" adlı konu olarak saklar (veri modeli iki seviyeli kalır, BL-39); İçerik listesi **ünite** gruplarına ayrılır, alt başlıklar grubun içinde etiketlenir.
-   - Yapay zekâ yine de üniteyi atlar ve her olayı ayrı konu yaparsa: içe aktarma ekranındaki **Ünite** alanına ünite adını yaz, bütün konular onun altına konur. Önizleme, dizin fazla parçalıysa bunu ayrıca uyarır.
+   - **Ünite alanı iki iş birden yapar:** doldurduğunda şablon yapay zekâya "her atomda konu tam olarak bu olacak" diye zorunlu kural gönderir; ayrıca gelen içerik ne olursa olsun bu ünitenin altına konur. Önizleme, dizin fazla parçalıysa ayrıca uyarır.
+   - Çok sayıda konu düzeltilecekse: İçerik → **Konular** → **Tümünü seç** → ünite adını yaz → taşı (tek tek işaretlemeye gerek yok).
    - `altbaslik` yerine `kazanim` da yazılabilir (aynı alan): ders › ünite › kazanım.
-   - Zaten eklenmiş içerik için: İçerik → **Konular** → düzeltilecekleri işaretle → Ünite yaz → "Seçilenleri ünite altına taşı". Tek konu seçiliyken yeniden adlandırabilirsin; aynı adı verirsen konular birleşir. Atomlar, sorular, öğrenme geçmişi ve vadeler değişmez.
+   - Zaten eklenmiş içerik için: İçerik → **Konular** → **Tümünü seç** (ya da tek tek işaretle) → Ünite yaz → "Seçilenleri ünite altına taşı". Tek konu seçiliyken yeniden adlandırabilirsin; aynı adı verirsen konular birleşir. Atomlar, sorular, öğrenme geçmişi ve vadeler değişmez.
 5. **Kendi kodlamaların:** notlarındaki kodlamaları şablon yapay zekâya "olduğu gibi ilgili atoma kodlama olarak ekle, uydurma" der. Ayrıca `cengeller` bölümüyle mevcut bir atoma sonradan çengel eklenebilir (`{ "atom": "<atom metni>", "tur": "kodlama", "metin": "…" }`; `tur` yazılmazsa kodlama).
 
 Biçim (`ogrenme-motoru-icerik/1`):

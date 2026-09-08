@@ -56,9 +56,12 @@ async function renderTopics(ctx: AppContext): Promise<HTMLElement> {
     count.textContent = only ? `1 konu seçili: ${only.topic.name}` : `${selected.size} konu seçili`
     moveBtn.disabled = busy || selected.size === 0 || !unitIn.value.trim()
     renameBtn.disabled = busy || !only || !nameIn.value.trim()
+    selectAllBtn.disabled = busy || selected.size === rows.length
+    clearBtn.disabled = busy || selected.size === 0
   }
   unitIn.addEventListener('input', sync)
   nameIn.addEventListener('input', sync)
+  queueMicrotask(sync) // ilk çizimde düğme durumları (satır sayısına göre) yerine otursun
   const move = async () => {
     const unit = unitIn.value.trim()
     if (busy || !unit || !selected.size) return
@@ -106,8 +109,17 @@ async function renderTopics(ctx: AppContext): Promise<HTMLElement> {
       await ctx.render()
     }
   }
+  const checkboxes = new Map<string, HTMLInputElement>()
+  const setAll = (on: boolean) => {
+    selected.clear()
+    for (const [id, cb] of checkboxes) { cb.checked = on; if (on) selected.add(id) }
+    sync()
+  }
+  const selectAllBtn = button('Tümünü seç', () => setAll(true), { class: 'btn-inline', testid: 'select-all-topics' })
+  const clearBtn = button('Seçimi temizle', () => setAll(false), { class: 'btn-inline', variant: 'quiet', testid: 'clear-topics' })
   const row = (r: (typeof rows)[number]) => {
     const cb = input({ type: 'checkbox', 'aria-label': r.topic.name })
+    checkboxes.set(r.topic.id, cb)
     cb.addEventListener('change', () => { if (cb.checked) selected.add(r.topic.id); else selected.delete(r.topic.id); sync() })
     return h('label', { class: 'topic-row', 'data-topic': r.topic.id }, cb,
       h('span', { class: 'stack' },
@@ -118,7 +130,12 @@ async function renderTopics(ctx: AppContext): Promise<HTMLElement> {
   return h('div', { class: 'screen', 'data-screen': 'topics' },
     h('div', { class: 'row' }, back(ctx), h('h1', { class: 'text-title' }, 'Konuları düzenle')),
     h('p', { class: 'text-support' }, 'Konuları bir ünitenin altında toplayabilirsin: "Küçük Kaynarca" → "18. yy Osmanlı › Küçük Kaynarca". Aynı adlı konu varsa birleşir. Atomlar, sorular ve öğrenme geçmişi değişmez.'),
-    h('div', { class: 'card stack' }, field('Ünite', unitIn), moveBtn, field('Konu adı (tek seçimde)', nameIn), renameBtn, count),
+    rows.length > 3 ? h('p', { class: 'text-support' }, `${rows.length} konu var. Hepsi aynı ünitedense: Tümünü seç → ünite adını yaz → taşı.`) : null,
+    h('div', { class: 'card stack' },
+      h('div', { class: 'row' }, selectAllBtn, clearBtn, count),
+      field('Ünite', unitIn), moveBtn,
+      field('Konu adı (tek seçimde)', nameIn), renameBtn,
+    ),
     rows.length ? h('div', { class: 'stack' }, ...rows.map(row)) : h('p', { class: 'text-support' }, 'Henüz konu yok.'),
   )
 }

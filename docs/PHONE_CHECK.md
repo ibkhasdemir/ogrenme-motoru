@@ -66,6 +66,8 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | Y-07 | Taşıma sonrası öğrenme | Bugün sayıları ve vadeler değişmemiş; çalışma döngüsü aynı | ☐ | |
 | Y-08 | 0/0/0 koruması (F-1) | yedek paylaşımından dönüşte sayılar doğru; bozulursa "Depo geçici olarak okunamadı" mesajı (sıfır değil) | ☐ | |
 | Y-09 | Ders notu kutusu | nota yapıştırıp "Şablonu paylaş" → sohbete şablon + not tek parça gider | ☐ | |
+| Y-11 | Konular → Tümünü seç | tek dokunuşla hepsi işaretlenir; ünite yazıp taşıyınca liste tek ünite grubu olur | ☐ | |
+| Y-12 | Ünite alanı + Şablonu paylaş | şablonda "konu tam olarak <ünite> olacak" kuralı görünür; dönen JSON tek ünite ile gelir | ☐ | |
 | Y-10 | Atom ekranı → Çengel ekle | kendi kodlaman kaydedilir, kartta "Çengeli göster" ile çıkar; aynı metin ikinci kez "zaten var" | ☐ | |
 
 ## 4. Notlar
