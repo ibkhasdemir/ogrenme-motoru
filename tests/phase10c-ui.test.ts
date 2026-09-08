@@ -20,6 +20,14 @@ const flush = async (n = 16) => { for (let i = 0; i < n; i++) await new Promise(
 const text = () => document.body.textContent ?? ''
 const byTestId = (id: string) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
 const click = async (el: HTMLElement) => { el.click(); await flush() }
+/** Geri yükleme/sıfırlama gerçek WebCrypto + fake-indexeddb ile koşar; kaç makro-görev tik'i sürdüğü ortama göre değişir (CI'da 12–16 tik yetmedi). Sabit tik yerine koşul beklenir. */
+const waitFor = async (ready: () => boolean, ms = 5000) => {
+  const t0 = Date.now()
+  while (!ready()) {
+    if (Date.now() - t0 > ms) throw new Error(`waitFor zaman aşımı (${ms} ms); ekran: ${document.querySelector('[data-screen]')?.getAttribute('data-screen')}`)
+    await new Promise((r) => setTimeout(r, 5))
+  }
+}
 const byText = (label: string) => [...document.querySelectorAll<HTMLElement>('button')].find((b) => (b.textContent ?? '').trim() === label)!
 
 const hash = new WebCryptoHashService()
@@ -75,10 +83,11 @@ describe('Phase 10c — S12 geri yükleme UI', () => {
     pick.text = backup.text
     await click(byText('Veri'))
     await click(byTestId('restore-pick')!)
-    expect(byTestId('restore-summary')).not.toBeNull()
+    await waitFor(() => !!byTestId('restore-summary'))
     expect(text()).toContain('1 atom · 1 soru · 1 öğrenme olayı')
     expect(text()).toContain(MSG_REPLACE)
     await click(byTestId('restore-confirm')!)
+    await waitFor(() => !!byTestId('restore-done'))
     expect(byTestId('restore-done')!.textContent).toContain('Doğrulandı: 1 atom, 1 soru, 1 öğrenme olayı.')
     expect((await repo.listAtoms()).map((a) => a.id)).not.toContain(b.id)
     // E-14: kurtarma noktası listesi (pre_restore) — tarih · neden · sayılar; "Bu noktaya dön" var
@@ -91,10 +100,10 @@ describe('Phase 10c — S12 geri yükleme UI', () => {
     expect(points[0]!.textContent).toContain('2 atom')
     const back = points[0]!.querySelector<HTMLElement>('button')!
     await click(back) // "Bu noktaya dön" → aynı özet + onay akışı
-    expect(byTestId('restore-summary')).not.toBeNull()
+    await waitFor(() => !!byTestId('restore-summary'))
     expect(text()).toContain('2 atom · 1 soru')
     await click(byTestId('restore-confirm')!)
-    expect(byTestId('restore-done')).not.toBeNull()
+    await waitFor(() => !!byTestId('restore-done'))
     expect((await repo.listAtoms())).toHaveLength(2) // ek atom geri geldi
   })
 
@@ -105,6 +114,7 @@ describe('Phase 10c — S12 geri yükleme UI', () => {
     await click(byText('Veri'))
     pick.text = '{"backupFormatVersion":2,"schemaVersion":2,"backupId":"x","createdAt":"2026-09-08T00:00:00.000Z","appVersion":"0.2.0","platform":"pwa","config":{},"content":{},"events":{},"checksum":{"algorithm":"sha256","value":"00","of":"x"}}'
     await click(byTestId('restore-pick')!)
+    await waitFor(() => !!byTestId('restore-error'))
     const err = byTestId('restore-error')!.textContent!
     expect(err).toContain(MSG_INVALID)
     expect(err).toContain('Sağlama toplamı uyuşmuyor')
@@ -120,6 +130,7 @@ describe('Phase 10c — S12 geri yükleme UI', () => {
     expect(await repo.listAtoms()).toHaveLength(1) // henüz değişmedi
     await click(byTestId('reset-step-1')!)
     await click(byTestId('reset-step-2')!)
+    await waitFor(() => !!byTestId('restore-message'))
     expect(byTestId('restore-message')!.textContent).toContain('Tüm veri sıfırlandı')
     expect(await repo.listAtoms()).toEqual([])
     expect((await recovery.list()).map((p) => p.reason)).toEqual(['pre_reset'])
