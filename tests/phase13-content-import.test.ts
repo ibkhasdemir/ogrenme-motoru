@@ -82,7 +82,7 @@ describe('planContentImport — çiftler ve bağlama', () => {
     expect(plan.atoms.map((a) => a.text)).toEqual([ATOM2])
     expect(plan.skippedAtoms).toBe(1)
     expect(plan.questions[0]!.atom).toEqual({ kind: 'existing', atomId: 'atm-1' })
-    expect(summarizePlan(plan)).toBe('1 atom, 1 soru eklenecek · 1 atom, 0 soru zaten var (atlanır)')
+    expect(summarizePlan(plan)).toBe('1 atom, 1 soru eklenecek · 1 atom zaten var (atlanır)')
   })
 
   it('dosya içi çift atom bir kez eklenir; mevcut aynı soru atlanır; bilinmeyen atom referansı hata', () => {
@@ -92,7 +92,7 @@ describe('planContentImport — çiftler ve bağlama', () => {
     expect(plan.skippedAtoms).toBe(2)
     expect(plan.questions).toHaveLength(0)
     expect(plan.skippedQuestions).toBe(1)
-    expect(plan.errors).toEqual(['sorular[1].atom: "Yok böyle atom." bulunamadı — bu dosyadaki "atomlar" içinde ya da mevcut içerikte birebir aynı metin olmalı'])
+    expect(plan.errors).toEqual(['sorular[1].atom: "Yok böyle atom." bulunamadı — soru bu dosyadaki "atomlar" içinde ya da mevcut içerikte birebir aynı metinli bir atoma bağlanmalı'])
   })
 })
 
@@ -110,7 +110,7 @@ describe('applyContentImport — yalnız ekler; pre_import noktası; hata → hi
   it('atomlar ders/konu/tür/çengel ile, soru doğru seçenek ve kaynakla oluşur; ikinci kez aynı dosya → eklenecek yok', async () => {
     const { repo, motor } = await fresh()
     const out = await applyContentImport(motor, await planFor(motor, SAMPLE), null)
-    expect(out).toEqual({ atomsAdded: 2, questionsAdded: 1, recoveryPointId: null })
+    expect(out).toEqual({ atomsAdded: 2, questionsAdded: 1, hooksAdded: 0, recoveryPointId: null })
     const c = await motor.content()
     expect(c.subjects.map((s) => s.name)).toEqual(['Tarih'])
     expect(c.topics.map((t) => t.name)).toEqual(['Tanzimat Dönemi'])
@@ -184,7 +184,9 @@ describe('Ekran — İçerik → İçe aktar → yapıştır → Önizle → Ekl
     await click(byTestId('to-import')!)
     expect(screen()).toBe('import')
     expect(byTestId('import-template')!.textContent).toContain(CONTENT_IMPORT_FORMAT)
-    expect(IMPORT_PROMPT_TEMPLATE).toContain('"dogru": "1839"')
+    expect(IMPORT_PROMPT_TEMPLATE).toContain('"dogru": "Pasarofça"')
+    expect(IMPORT_PROMPT_TEMPLATE).toContain('"altbaslik"')
+    expect(IMPORT_PROMPT_TEMPLATE).toContain('"cengeller"')
     expect((byTestId('apply-import') as HTMLButtonElement).disabled).toBe(true)
 
     await paste('{ bozuk')

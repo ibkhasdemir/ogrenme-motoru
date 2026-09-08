@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 251 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 256 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -47,7 +47,8 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 - **Yedek al** → `ogrenme-motoru-backup-YYYY-MM-DD-HHmmss-SSS-<id>.json`. Tüm içerik, tüm ham öğrenme geçmişi (Attempt + AttemptVoid), soru sürümleri ve yapılandırma; SHA-256 sağlama toplamı. Telefonda Dosyalar / iCloud Drive / Google Drive'a kaydet. Kaydetme gözlemlenemediyse "İndirme başlatıldı… doğrula" + **Kaydettim** teyidi ister.
 - Bugün ekranı 7 günden eski yedekte veya 250 yeni öğrenme olayında hatırlatır; hiç yedek yoksa "Yedek durumu bilinmiyor · Yedek al".
 - **Yedekten geri yükle** → Dosya seç → doğrulama (sağlama toplamı, bütünlük, deneme hesabı) → özet ("Mevcut verin bu yedekle değiştirilecek") → **Bu yedeğe geri dön**. Önce mevcut durumdan otomatik bir **kurtarma noktası** alınır; yazılamazsa geri yükleme başlamaz. Bozuk yedek aktif veriyi asla değiştirmez.
-- **Kurtarma noktaları**: cihaz içi tam kopyalar (geri yükleme/sıfırlama öncesi, sürüm geçişi, günlük). Tarayıcı verisi silinirse bunlar da gider; kalıcı koruma dış yedektir.
+- **Kurtarma noktaları**: cihaz içi tam kopyalar, **kendiliğinden** alınır (günün ilk değişikliğinde günlük nokta; geri yükleme / içe aktarma / sıfırlama öncesi; sürüm geçişi öncesi ve sonrası). Bunun için bir şey yapman gerekmez. Açılışta tarayıcıdan kalıcı depo izni istenir (`navigator.storage.persist`), böylece yer sıkışmasında ilk silinen veri olmaz. Tarayıcı verisi silinirse ya da telefon kaybolursa bunlar da gider; kalıcı koruma dış yedek dosyasıdır, haftada bir yeter.
+- **Neden dosya adımı elle?** iPhone'da bir web uygulaması paylaşım sayfası dışında arka planda dosya yazamaz ya da iCloud'a erişemez; bulut yedek v0 dışıdır. Bu yüzden dış yedek "Yedek al → Dosyalar'a kaydet" olarak kalır (BL-40).
 - **Tüm veriyi sıfırla**: iki onay; öncesinde kurtarma noktası.
 - Eski sürümle alınmış yedekler (format 1) okunur ve bellekte güncel formata çevrilir; eski soru sürümlerinin metni yoksa "eski veri modelinde saklanmadığı için mevcut değil" olarak işaretlenir, uydurulmaz.
 - Farklı bir zamanlayıcı sürümüyle alınan yedek: ham geçmiş ve içerik olduğu gibi yüklenir, hafıza durumu kurulu motorla yeniden hesaplanır (uyarı gösterilir).
@@ -56,9 +57,11 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 
 Atom ve soruları tek tek yazmak yerine JSON olarak ekle (BL-38; spec dışı, sahibi kararıyla eklendi). Uygulamanın içinde yapay zekâ yoktur: JSON'u dışarıda üretirsin (bir yapay zekâ sohbeti, tablo ya da elle), uygulamaya yapıştırırsın.
 
-1. İçerik → **İçe aktar** → **Şablonu kopyala**. Şablon, bir yapay zekâ sohbetine yapıştırılacak hazır istektir; sonuna notlarını ekle.
-2. Çıkan JSON'u **kutuya yapıştır** (ya da `.json` dosyası seç) → **Önizle** → "N atom, M soru eklenecek" → **Ekle**.
-3. Yalnız ekler: mevcut içerik ve öğrenme geçmişi değişmez. Aynı metinli atom varsa yeniden eklenmez, sorular ona bağlanır. Tek bir hatalı öğe varsa hiçbir şey eklenmez; hata listesi hangi öğe olduğunu söyler. Kurtarma deposu bağlıysa önce `pre_import` kurtarma noktası alınır.
+1. İçerik → **İçe aktar** → **Şablonu paylaş** (iPhone: paylaşım sayfasından doğrudan ChatGPT/Claude uygulamasına) ya da **Şablonu kopyala**. Şablon, sohbete yapıştırılacak hazır istektir; sonuna ders notlarını ekle (fotoğraftan çıkarılmış metin de olur).
+2. Çıkan JSON'u kopyala → uygulamada **Panodan yapıştır** (ya da kutuya elle yapıştır / `.json` dosyası seç) → **Önizle** → "N atom, M soru eklenecek" → **Ekle**. Yapay zekâ çıktısı ```json çitli ya da açıklamalı gelse de okunur; yalnız sarmalayıcı temizlenir, veri "düzeltilmez".
+3. Yalnız ekler: mevcut içerik ve öğrenme geçmişi değişmez. Aynı metinli atom varsa yeniden eklenmez, sorular/çengeller ona bağlanır. Tek bir hatalı öğe varsa hiçbir şey eklenmez; hata listesi hangi öğe olduğunu söyler. Kurtarma deposu bağlıysa önce `pre_import` kurtarma noktası alınır.
+4. **Dizin:** `konu` ünite/ana konu, `altbaslik` alt başlıktır (örn. "18. yy Osmanlı" › "Islahatlar"). Uygulama bunu "Konu › Alt başlık" adlı konu olarak saklar (veri modeli iki seviyeli kalır, BL-39); İçerik listesi Ders › Konu gruplarına ayrılır, her grupta atom/soru sayısı görünür.
+5. **Kendi kodlamaların:** notlarındaki kodlamaları şablon yapay zekâya "olduğu gibi ilgili atoma kodlama olarak ekle, uydurma" der. Ayrıca `cengeller` bölümüyle mevcut bir atoma sonradan çengel eklenebilir (`{ "atom": "<atom metni>", "tur": "kodlama", "metin": "…" }`; `tur` yazılmazsa kodlama).
 
 Biçim (`ogrenme-motoru-icerik/1`):
 

@@ -8,6 +8,8 @@ import { ATOM_FACETS } from '../../domain'
 export const CONTENT_IMPORT_FORMAT = 'ogrenme-motoru-icerik/1'
 export const MIN_OPTIONS = 2
 export const MAX_OPTIONS = 5
+/** Konu adı içinde alt başlık ayracı: "18. yy Osmanlı › Islahatlar" (veri modeli 2 seviye; 3. seviye ad içinde taşınır, BL-39) */
+export const TOPIC_SEPARATOR = ' › '
 
 export interface ImportAtom {
   subjectName: string
@@ -31,9 +33,19 @@ export interface ImportQuestion {
   path: string
 }
 
+/** "cengeller" / "kodlamalar" bölümü: mevcut ya da bu dosyadaki bir atoma çengel ekler (kullanıcının kendi kodlamaları) */
+export interface ImportHook {
+  atomText: string | null
+  atomId: string | null
+  type: HookType
+  content: string
+  path: string
+}
+
 export interface ParsedContent {
   atoms: ImportAtom[]
   questions: ImportQuestion[]
+  hooks: ImportHook[]
   errors: string[]
 }
 
@@ -47,11 +59,20 @@ export interface PlannedQuestion {
   atom: AtomTarget
 }
 
+/** yalnız MEVCUT atomlara eklenecek çengeller; yeni atomlarınkiler plan aşamasında atomun `hooks` listesine katılır */
+export interface PlannedHook {
+  atomId: string
+  type: HookType
+  content: string
+}
+
 export interface ImportPlan {
   atoms: ImportAtom[]
   questions: PlannedQuestion[]
+  hooks: PlannedHook[]
   skippedAtoms: number
   skippedQuestions: number
+  skippedHooks: number
   errors: string[]
 }
 
@@ -59,6 +80,8 @@ export interface ExistingContent {
   atoms: Atom[]
   /** mevcut soruların güncel sürüm metinleri (yalnız içeriği mevcut sürümler) */
   questions: { primaryAtomId: string; text: string; archived: boolean }[]
+  /** mevcut çengeller (çift kontrolü) — verilmezse boş sayılır */
+  hooks?: { atomId: string; content: string }[]
 }
 
 /** Türkçe etiket ↔ enum eşlemesi; büyük/küçük harf, aksan, boşluk, tire, alt çizgi görmezden gelinir. */
@@ -112,6 +135,32 @@ export function hookTypeFromLabel(v: string): HookType | null { return lookup(HO
 type Obj = Record<string, unknown>
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v)
 
+/**
+ * Yapay zekâ çıktısı çoğu zaman "saf JSON" değildir: ```json çitleri, önünde/arkasında açıklama cümlesi, BOM, akıllı tırnak.
+ * Önce olduğu gibi denenir; olmazsa çit ve çevre metin atılır (ilk `{` … son `}`), yine olmazsa akıllı tırnaklar düz tırnağa çevrilir.
+ * Başarılıysa ayrıştırılmış değer, değilse ilk hata mesajı döner. Veri "düzeltilmez"; yalnız sarmalayıcı temizlenir.
+ */
+export function parseLooseJson(text: string): { value: unknown } | { error: string } {
+  const attempts: string[] = []
+  const raw = text.replace(/^﻿/, '')
+  attempts.push(raw)
+  const unfenced = raw.replace(/```[a-zA-Z]*\s*/g, '').replace(/```/g, '')
+  const first = unfenced.indexOf('{')
+  const last = unfenced.lastIndexOf('}')
+  if (first >= 0 && last > first) attempts.push(unfenced.slice(first, last + 1))
+  const squoted = attempts[attempts.length - 1]!.replace(/[“”„«»]/g, '"').replace(/[‘’]/g, "'")
+  attempts.push(squoted)
+  let firstError = ''
+  for (const a of attempts) {
+    try {
+      return { value: JSON.parse(a) }
+    } catch (e) {
+      if (!firstError) firstError = (e as Error).message
+    }
+  }
+  return { error: firstError || 'boş' }
+}
+
 function optStr(o: Obj, key: string, path: string, errors: string[]): string | undefined {
   const v = o[key]
   if (v === undefined || v === null) return undefined
@@ -132,11 +181,19 @@ function strList(v: unknown): string[] | null {
   return null
 }
 
+function parseHookType(v: unknown, path: string, errors: string[]): HookType | null {
+  if (v === undefined || v === null) return 'logic'
+  const t = typeof v === 'string' ? hookTypeFromLabel(v) : null
+  if (!t) { errors.push(`${path}.tur: "${String(v)}" tanınmadı (mantık, kodlama, absürt, benzetme, hikâye, görsel, uyarı, kişisel)`); return null }
+  return t
+}
+
 function parseAtom(raw: unknown, path: string, errors: string[]): ImportAtom | null {
   if (!isObj(raw)) { errors.push(`${path}: nesne olmalı`); return null }
   const before = errors.length
   const subjectName = reqStr(raw, 'ders', path, errors)
-  const topicName = reqStr(raw, 'konu', path, errors)
+  const konu = reqStr(raw, 'konu', path, errors)
+  const altbaslik = optStr(raw, 'altbaslik', path, errors) ?? optStr(raw, 'altBaslik', path, errors) ?? optStr(raw, 'alt_baslik', path, errors)
   const text = reqStr(raw, 'atom', path, errors)
   const prompt = reqStr(raw, 'soru', path, errors)
   const why = optStr(raw, 'neden', path, errors)
@@ -158,20 +215,16 @@ function parseAtom(raw: unknown, path: string, errors: string[]): ImportAtom | n
     const list = Array.isArray(raw.cengel) ? raw.cengel : [raw.cengel]
     list.forEach((hk, i) => {
       const hp = `${path}.cengel[${i}]`
+      if (typeof hk === 'string') { if (hk.trim()) hooks.push({ type: 'mnemonic', content: hk.trim() }); return } // düz metin → kodlama
       if (!isObj(hk)) { errors.push(`${hp}: { "tur": …, "metin": … } nesnesi olmalı`); return }
       const content = reqStr(hk, 'metin', hp, errors)
-      let type: HookType = 'logic'
-      if (hk.tur !== undefined && hk.tur !== null) {
-        const t = typeof hk.tur === 'string' ? hookTypeFromLabel(hk.tur) : null
-        if (!t) { errors.push(`${hp}.tur: "${String(hk.tur)}" tanınmadı (mantık, kodlama, absürt, benzetme, hikâye, görsel, uyarı, kişisel)`); return }
-        type = t
-      }
-      if (content) hooks.push({ type, content })
+      const type = parseHookType(hk.tur, hp, errors)
+      if (content && type) hooks.push({ type, content })
     })
   }
 
-  if (errors.length > before || !subjectName || !topicName || !text || !prompt) return null
-  const atom: ImportAtom = { subjectName, topicName, text, prompt, facets, hooks }
+  if (errors.length > before || !subjectName || !konu || !text || !prompt) return null
+  const atom: ImportAtom = { subjectName, topicName: altbaslik ? `${konu}${TOPIC_SEPARATOR}${altbaslik}` : konu, text, prompt, facets, hooks }
   if (why) atom.why = why
   if (how) atom.how = how
   return atom
@@ -209,31 +262,44 @@ function parseQuestion(raw: unknown, path: string, errors: string[]): ImportQues
   return { atomText, atomId, text, options, correctIndex, source, path }
 }
 
+function parseHook(raw: unknown, path: string, errors: string[]): ImportHook | null {
+  if (!isObj(raw)) { errors.push(`${path}: nesne olmalı`); return null }
+  const before = errors.length
+  const atomText = optStr(raw, 'atom', path, errors) ?? null
+  const atomId = optStr(raw, 'atomId', path, errors) ?? null
+  if (!atomText && !atomId) errors.push(`${path}.atom: zorunlu — çengelin bağlı olduğu atomun metni (birebir)`)
+  const content = reqStr(raw, 'metin', path, errors)
+  const type = raw.tur === undefined || raw.tur === null ? 'mnemonic' : parseHookType(raw.tur, path, errors) // bölümün varsayılanı kodlama
+  if (errors.length > before || !content || !type) return null
+  return { atomText, atomId, type, content, path }
+}
+
 export function parseContentImport(text: string): ParsedContent {
   const errors: string[] = []
   const atoms: ImportAtom[] = []
   const questions: ImportQuestion[] = []
-  let root: unknown
-  try {
-    root = JSON.parse(text)
-  } catch (e) {
-    return { atoms, questions, errors: [`JSON okunamadı: ${(e as Error).message}`] }
-  }
-  if (!isObj(root)) return { atoms, questions, errors: ['Kök bir nesne olmalı: { "atomlar": [...], "sorular": [...] }'] }
+  const hooks: ImportHook[] = []
+  const parsed = parseLooseJson(text)
+  if ('error' in parsed) return { atoms, questions, hooks, errors: [`JSON okunamadı: ${parsed.error}. Metin bir { ile başlayıp } ile bitmeli; yapay zekâ çıktısında JSON dışında açıklama varsa yalnız JSON kısmını al.`] }
+  const root = parsed.value
+  if (!isObj(root)) return { atoms, questions, hooks, errors: ['Kök bir nesne olmalı: { "atomlar": [...], "sorular": [...] }'] }
   if (root.format !== undefined && root.format !== CONTENT_IMPORT_FORMAT) errors.push(`format: "${String(root.format)}" tanınmadı; beklenen "${CONTENT_IMPORT_FORMAT}"`)
   const rawAtoms = root.atomlar ?? []
   const rawQs = root.sorular ?? []
+  const rawHooks = root.cengeller ?? root.kodlamalar ?? []
   if (!Array.isArray(rawAtoms)) errors.push('atomlar: dizi olmalı')
   else rawAtoms.forEach((raw, i) => { const a = parseAtom(raw, `atomlar[${i}]`, errors); if (a) atoms.push(a) })
   if (!Array.isArray(rawQs)) errors.push('sorular: dizi olmalı')
   else rawQs.forEach((raw, i) => { const q = parseQuestion(raw, `sorular[${i}]`, errors); if (q) questions.push(q) })
-  if (!errors.length && !atoms.length && !questions.length) errors.push('İçe aktarılacak bir şey yok: "atomlar" ve "sorular" boş')
-  return { atoms, questions, errors }
+  if (!Array.isArray(rawHooks)) errors.push('cengeller: dizi olmalı')
+  else rawHooks.forEach((raw, i) => { const hk = parseHook(raw, `cengeller[${i}]`, errors); if (hk) hooks.push(hk) })
+  if (!errors.length && !atoms.length && !questions.length && !hooks.length) errors.push('İçe aktarılacak bir şey yok: "atomlar", "sorular" ve "cengeller" boş')
+  return { atoms, questions, hooks, errors }
 }
 
 /**
- * Plan: aynı metinli (arşivlenmemiş) atom varsa yeniden eklenmez, sorular ona bağlanır; aynı atomda aynı metinli soru varsa eklenmez.
- * Bir sorunun atomu bulunamıyorsa hata (sessiz atlama yok). Hata varsa plan uygulanmaz.
+ * Plan: aynı metinli (arşivlenmemiş) atom varsa yeniden eklenmez, sorular/çengeller ona bağlanır; aynı atomda aynı metinli soru ya da
+ * çengel varsa eklenmez. Bir öğenin atomu bulunamıyorsa hata (sessiz atlama yok). Hata varsa plan uygulanmaz.
  */
 export function planContentImport(parsed: ParsedContent, existing: ExistingContent): ImportPlan {
   const errors = [...parsed.errors]
@@ -246,7 +312,18 @@ export function planContentImport(parsed: ParsedContent, existing: ExistingConte
     const key = normText(a.text)
     if (targets.has(key)) { skippedAtoms++; continue }
     targets.set(key, { kind: 'new', index: atoms.length })
-    atoms.push(a)
+    atoms.push({ ...a, hooks: [...a.hooks] })
+  }
+
+  const resolveTarget = (atomText: string | null, atomId: string | null, path: string, what: string): AtomTarget | null => {
+    if (atomId) {
+      if (existing.atoms.some((a) => a.id === atomId)) return { kind: 'existing', atomId }
+      errors.push(`${path}.atomId: "${atomId}" bulunamadı`)
+      return null
+    }
+    const t = targets.get(normText(atomText ?? ''))
+    if (!t) errors.push(`${path}.atom: "${atomText}" bulunamadı — ${what} bu dosyadaki "atomlar" içinde ya da mevcut içerikte birebir aynı metinli bir atoma bağlanmalı`)
+    return t ?? null
   }
 
   const existingQ = new Set(existing.questions.filter((q) => !q.archived).map((q) => `${q.primaryAtomId}\n${normText(q.text)}`))
@@ -254,25 +331,44 @@ export function planContentImport(parsed: ParsedContent, existing: ExistingConte
   const questions: PlannedQuestion[] = []
   let skippedQuestions = 0
   for (const q of parsed.questions) {
-    let target: AtomTarget | undefined
-    if (q.atomId) {
-      target = existing.atoms.some((a) => a.id === q.atomId) ? { kind: 'existing', atomId: q.atomId } : undefined
-      if (!target) { errors.push(`${q.path}.atomId: "${q.atomId}" bulunamadı`); continue }
-    } else {
-      target = targets.get(normText(q.atomText ?? ''))
-      if (!target) { errors.push(`${q.path}.atom: "${q.atomText}" bulunamadı — bu dosyadaki "atomlar" içinde ya da mevcut içerikte birebir aynı metin olmalı`); continue }
-    }
+    const target = resolveTarget(q.atomText, q.atomId, q.path, 'soru')
+    if (!target) continue
     const key = `${target.kind === 'new' ? `new:${target.index}` : target.atomId}\n${normText(q.text)}`
     if (seenQ.has(key) || (target.kind === 'existing' && existingQ.has(`${target.atomId}\n${normText(q.text)}`))) { skippedQuestions++; continue }
     seenQ.add(key)
     questions.push({ text: q.text, options: q.options, correctIndex: q.correctIndex, source: q.source, atom: target })
   }
-  return { atoms, questions, skippedAtoms, skippedQuestions, errors }
+
+  const existingH = new Set((existing.hooks ?? []).map((h) => `${h.atomId}\n${normText(h.content)}`))
+  const seenH = new Set<string>()
+  const hooks: PlannedHook[] = []
+  let skippedHooks = 0
+  for (const hk of parsed.hooks) {
+    const target = resolveTarget(hk.atomText, hk.atomId, hk.path, 'çengel')
+    if (!target) continue
+    if (target.kind === 'new') {
+      const atom = atoms[target.index]!
+      if (atom.hooks.some((x) => normText(x.content) === normText(hk.content))) { skippedHooks++; continue }
+      atom.hooks.push({ type: hk.type, content: hk.content })
+      continue
+    }
+    const key = `${target.atomId}\n${normText(hk.content)}`
+    if (seenH.has(key) || existingH.has(key)) { skippedHooks++; continue }
+    seenH.add(key)
+    hooks.push({ atomId: target.atomId, type: hk.type, content: hk.content })
+  }
+
+  return { atoms, questions, hooks, skippedAtoms, skippedQuestions, skippedHooks, errors }
 }
 
-/** Ekranda özet cümlesi (tek yerde üretilir; test edilir). */
+/** Ekranda özet cümlesi (tek yerde üretilir; test edilir). Yeni atomların kendi çengelleri atom sayısına dâhildir. */
 export function summarizePlan(p: ImportPlan): string {
   const parts = [`${p.atoms.length} atom, ${p.questions.length} soru eklenecek`]
-  if (p.skippedAtoms || p.skippedQuestions) parts.push(`${p.skippedAtoms} atom, ${p.skippedQuestions} soru zaten var (atlanır)`)
+  if (p.hooks.length) parts.push(`${p.hooks.length} çengel mevcut atomlara eklenecek`)
+  const skipped: string[] = []
+  if (p.skippedAtoms) skipped.push(`${p.skippedAtoms} atom`)
+  if (p.skippedQuestions) skipped.push(`${p.skippedQuestions} soru`)
+  if (p.skippedHooks) skipped.push(`${p.skippedHooks} çengel`)
+  if (skipped.length) parts.push(`${skipped.join(', ')} zaten var (atlanır)`)
   return parts.join(' · ')
 }

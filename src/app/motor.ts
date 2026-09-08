@@ -373,6 +373,19 @@ export class Motor {
   }
 
   /** 07 S10: beş zorunlu alan; "+ Gelişmiş" isteğe bağlı. */
+  /** Mevcut atoma çengel ekler (içe aktarma "cengeller" bölümü, BL-38). Aynı metinli çengel varsa yeniden eklenmez → false. */
+  async addHook(atomId: string, hook: { type: HookType; content: string }): Promise<boolean> {
+    await this.beforeWrite()
+    const content = hook.content.trim()
+    if (!content) throw new MotorError('Çengel metni boş olamaz.')
+    const c = await this.content()
+    if (!c.atoms.some((a) => a.id === atomId)) throw new MotorError(`Atom bulunamadı: ${atomId}`)
+    const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr')
+    if (c.hooks.some((h) => h.atomId === atomId && norm(h.content) === norm(content))) return false
+    await this.repo.putHook({ id: this.ids.newId(), atomId, type: hook.type, content })
+    return true
+  }
+
   async addQuestion(input: NewQuestionFormInput): Promise<ReviseOutcome> {
     await this.beforeWrite()
     const texts = input.options.map((o) => o.trim())

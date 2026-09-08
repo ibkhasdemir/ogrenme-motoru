@@ -75,6 +75,20 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Bilinen sınır: uygulama sırasında tek transaction yok; ön doğrulama sonrası ekleme sıralıdır (yarıda kesilirse eklenenler kalır, eksikler ikinci denemede "zaten var" ile atlanır).
 - Durum: **KAPANDI** (sahibi kararı 2026-09-08). Spec'e (`07`) sonraki revizyonda S11b olarak işlenmesi önerilir; `docs/spec` bu depoda düzenlenmez.
 
+### BL-39 — Üçüncü dizin seviyesi (alt başlık) ve kullanıcı kodlamaları
+- Bölüm: `01` §2 (Subject → Topic → Atom, iki seviye), `10` §1 (analiz/zayıf halka non-goal).
+- Gözlem (2026-09-08, telefon kullanımı): kullanıcı ders notunu (18. yy Osmanlı) ıslahatlar / siyasi tarih / padişahlar gibi alt başlıklara ayrı dizinlemek istiyor; kendi kodlamalarını (mnemonik) ilgili yere bağlı tutmak istiyor; "yanlışım nerede" sorusuna konu bazında bakabilmek istiyor.
+- Karar (Claude, sahibi adına — şema değişmeden yapılabilen kısım): içe aktarmada `altbaslik` alanı Topic adına `" › "` ile eklenir ("18. yy Osmanlı › Islahatlar"); İçerik listesi Ders › Konu gruplarına ayrılır (sayılarla, açılır-kapanır); `cengeller`/`kodlamalar` bölümü mevcut atomlara çengel ekler (`Motor.addHook`); şablon yapay zekâya kullanıcının kodlamalarını uydurmadan aktarmayı söyler. Veri modeli ve yedek formatı değişmedi.
+- Ertelenen (sahibi kararı gerekir): gerçek hiyerarşi (`Topic.parentTopicId`, şema 3, migration, yedek formatı 3); kazanım (learning outcome) alanı; konu bazında doğruluk/tanı görünümü (`10` non-goal "zayıf halka" — spec revizyonu gerekir). Ad içi ayraç geçici kodlamadır; gerçek hiyerarşiye geçilirse migration ayraçtan böler.
+- Durum: **UYGULANDI (kısmi)**; ertelenenler açık.
+
+### BL-40 — "Yedek al" dosya adımı elle kalıyor (iPhone)
+- Bölüm: `06` §11 (BackupFileService: saved / initiated + teyit), `10` §1 (bulut yedek non-goal), `13` §2.
+- Gözlem (2026-09-08): kullanıcı dış yedeği "dosyaya çevir, kaydet, geri yüklerken dosyayı bul" akışını yorucu buluyor; arka planda otomatik olmasını istiyor.
+- Gerçek: iPhone'da web uygulaması paylaşım sayfası dışında dosya yazamaz, iCloud'a erişemez; sessiz dış yedek yalnız bulutla mümkündür (v0 dışı). Cihaz içi kurtarma noktaları zaten otomatiktir (günlük + işlem öncesi).
+- Karar: dosya akışı spec'teki gibi kalır. Yapılan: açılışta `navigator.storage.persist()` (kalıcı depo isteği); Veri ekranı notu ve README, otomatik cihaz içi kopyaların varlığını ve dış dosyanın haftalık sigorta olduğunu açıkça söyler. Hatırlatma eşiği (`06` §10: 7 gün / 250 olay) değişmedi.
+- Durum: **KAPANDI** (sınır platformdan). Bulut yedek ileride ayrı karar.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

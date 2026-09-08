@@ -56,6 +56,10 @@ async function boot(): Promise<void> {
     }
     await ensurePostMigrationPoint(baseDeps).catch((e) => console.warn('post_migration noktası alınamadı', e))
     const motor = await Motor.create({ repo, clock, ids, beforeWrite: () => ensureDailyPoint(baseDeps).then(() => undefined), recoverStorage: () => repo.reopen() })
+    // 13 §2: cihaz içi depo (ana DB + kurtarma noktaları) kalıcı işaretlenir; tarayıcı yer sıkışmasında ilk silinenlerden olmaz.
+    // Destek yoksa sessiz (iOS ana ekran uygulaması depoyu zaten korur). Dış yedek dosyasının yerini tutmaz.
+    const persist = navigator.storage?.persist?.()
+    if (persist) void persist.catch(() => undefined)
     const updates = createUpdateController()
     void registerServiceWorker(updates) // 13 §7: arka planda; çekirdek yolu ağ beklemez
     const app = mountApp(root, {

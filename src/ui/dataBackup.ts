@@ -9,7 +9,7 @@ export interface BackupServices {
   hash: HashService
 }
 
-export const BACKUP_NOTE = 'Yedek dosyası telefondan bağımsızdır; tarayıcı verisi silinse bile geri yükler. Kurtarma noktaları ise bu cihazın içindedir ve tarayıcı verisiyle birlikte silinebilir.'
+export const BACKUP_NOTE = 'Kurtarma noktaları cihazın içinde kendiliğinden alınır (günün ilk değişikliğinde ve her geri yükleme / içe aktarma / sıfırlama öncesi); bunun için bir şey yapman gerekmez. Ama telefon kaybolur ya da tarayıcı verisi silinirse onlar da gider. Yedek dosyası bunun sigortasıdır: haftada bir yeter. iPhone, paylaşım sayfası dışında arka planda dosya yazmaya izin vermez; bu yüzden dosya adımı elle kalır.'
 
 export async function currentReminder(ctx: AppContext): Promise<BackupReminder> {
   const repo = ctx.motor.repo

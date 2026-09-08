@@ -8,6 +8,8 @@ import { writeRecoveryPoint, type RecoveryDeps } from './recoveryPoints'
 export interface ImportResult {
   atomsAdded: number
   questionsAdded: number
+  /** yalnız mevcut atomlara eklenen çengeller (yeni atomlarınkiler atomla birlikte yazılır) */
+  hooksAdded: number
   recoveryPointId: string | null
 }
 
@@ -18,9 +20,13 @@ export class ContentImportError extends Error {
   }
 }
 
+export function planIsEmpty(plan: ImportPlan): boolean {
+  return !plan.atoms.length && !plan.questions.length && !plan.hooks.length
+}
+
 export async function applyContentImport(motor: Motor, plan: ImportPlan, recovery: RecoveryDeps | null): Promise<ImportResult> {
   if (plan.errors.length) throw new ContentImportError(`Planda ${plan.errors.length} hata var; hiçbir şey eklenmedi.`)
-  if (!plan.atoms.length && !plan.questions.length) throw new ContentImportError('Eklenecek yeni içerik yok.')
+  if (planIsEmpty(plan)) throw new ContentImportError('Eklenecek yeni içerik yok.')
 
   let recoveryPointId: string | null = null
   if (recovery) {
@@ -45,5 +51,10 @@ export async function applyContentImport(motor: Motor, plan: ImportPlan, recover
     await motor.addQuestion({ primaryAtomId, source: q.source, text: q.text, options: q.options, correctIndex: q.correctIndex })
     questionsAdded++
   }
-  return { atomsAdded: newIds.length, questionsAdded, recoveryPointId }
+
+  let hooksAdded = 0
+  for (const hk of plan.hooks) {
+    if (await motor.addHook(hk.atomId, { type: hk.type, content: hk.content })) hooksAdded++
+  }
+  return { atomsAdded: newIds.length, questionsAdded, hooksAdded, recoveryPointId }
 }

@@ -54,12 +54,28 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
       badge ? h('span', { class: 'badge' }, badge) : null,
     )
   }
+  // Ders › Konu grupları (dizin görünümü, BL-39): sıralı atom listesi konuya göre kesilir; arama açıkken gruplar açık gelir
+  const groups: { key: string; label: string; atoms: Atom[]; questions: number }[] = []
+  for (const a of rest) {
+    const topic = c.topics.find((t) => t.id === a.topicId)
+    const subject = topic ? c.subjects.find((s) => s.id === topic.subjectId) : undefined
+    let g = groups.find((x) => x.key === a.topicId)
+    if (!g) { g = { key: a.topicId, label: [subject?.name, topic?.name].filter(Boolean).join(' › ') || 'Konusuz', atoms: [], questions: 0 }; groups.push(g) }
+    g.atoms.push(a)
+    g.questions += c.questions.filter((x) => x.primaryAtomId === a.id && !x.archived).length
+  }
+  const openAll = !!q || groups.length === 1
   return h('div', { class: 'screen', 'data-screen': 'content' },
     h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik')),
-    h('div', { class: 'row' }, button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' })),
+    h('div', { class: 'row' }, button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' }), h('span', { class: 'text-meta' }, `${rest.length + missingPrompt.length} atom · ${groups.length} konu`)),
     search,
     missingPrompt.length ? h('div', { class: 'stack' }, h('p', { class: 'text-support' }, 'Soru yüzü eksik olan atomlar çalışılmaz; tamamlayınca kuyruğa girer.'), missingPrompt.map((a) => row(a, 'soru yüzü eksik'))) : null,
-    rest.length ? h('div', { class: 'stack' }, rest.map((a) => row(a))) : (!missingPrompt.length ? h('p', { class: 'text-support' }, 'Henüz atom yok.') : null),
+    rest.length
+      ? h('div', { class: 'stack' }, ...groups.map((g) => h('details', { class: 'group', open: openAll, 'data-group': g.key },
+        h('summary', { class: 'group-summary' }, h('span', { class: 'text-body' }, g.label), h('span', { class: 'text-meta' }, `${g.atoms.length} atom · ${g.questions} soru`)),
+        h('div', { class: 'stack group-body' }, ...g.atoms.map((a) => row(a))),
+      )))
+      : (!missingPrompt.length ? h('p', { class: 'text-support' }, 'Henüz atom yok.') : null),
   )
 }
 
