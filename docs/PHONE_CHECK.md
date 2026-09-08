@@ -53,6 +53,19 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | M-UP-07 | hash'li varlıklar | değişmeyen `assets/*.js` ağ olmadan önbellekten; değişen varlık yeni adıyla ağdan | ☐ | |
 | M-UP-08 | yarım sürüm yok | bir JS varlığı engellenir → yeni SW install başarısız, eski build çalışır; ağ kesilir → eski tam build çevrimdışı açılır | ☐ | |
 
+## 3.1 Yeni özellikler — telefonda denenecekler (2026-09-08 sonrası)
+
+| ID | Adım | Beklenen | Durum | Cihaz / not |
+|---|---|---|---|---|
+| Y-01 | İçe aktar → Şablonu paylaş | paylaşım sayfası açılır; şablon yapay zekâ uygulamasına gider | ☐ | |
+| Y-02 | Sohbetten JSON'u kopyala → Panodan yapıştır | metin kutuya gelir, önizleme çıkar (çitli/açıklamalı çıktı da okunur) | ☐ | |
+| Y-03 | Ünite alanı | "18. yy Osmanlı" yazılınca tüm konular onun altına girer; liste tek ünite grubu olur | ☐ | |
+| Y-04 | Parçalı dizin uyarısı | ünite verilmeden önizlemede "N atom N ayrı konuya dağılmış" uyarısı görünür | ☐ | |
+| Y-05 | İçerik → Konular | mevcut konular listelenir; çoklu seçim → "Seçilenleri ünite altına taşı" çalışır | ☐ | |
+| Y-06 | Konu birleştirme | tek konu seçip mevcut bir konunun adını vermek atomları oraya taşır; sayılar toplanır | ☐ | |
+| Y-07 | Taşıma sonrası öğrenme | Bugün sayıları ve vadeler değişmemiş; çalışma döngüsü aynı | ☐ | |
+| Y-08 | 0/0/0 koruması (F-1) | yedek paylaşımından dönüşte sayılar doğru; bozulursa "Depo geçici olarak okunamadı" mesajı (sıfır değil) | ☐ | |
+
 ## 4. Notlar
 - Bu liste `11` kural 4'e göre kod yazan tarafından yazılan dokümanlardandır; sonuçlar buraya işlenir, spec'e değil.
 - Yıkıcı yollar (geri yükleme, sıfırlama) telefonda denenmeden önce dış yedek alınır (`13` §2).

@@ -81,6 +81,7 @@ describe('Motor.renameTopic — yeniden adlandır ve birleştir', () => {
     const c = await motor.content()
     expect(c.atoms.find((x) => x.id === a.id)!.topicId).toBe(tB.id)
     expect(c.atoms.find((x) => x.id === b.id)!.topicId).toBe(tB.id)
+    expect(c.topics.filter((t) => t.name === 'Antlaşmalar').length).toBe(2) // kaynak konu boş kaldı, adı hedefe çekildi (eski ad diriltilmez)
     expect(serializeMemory(motor.memory)).toBe(before)
     expect(motor.listAttempts()).toHaveLength(attemptsBefore)
     await motor.refresh()

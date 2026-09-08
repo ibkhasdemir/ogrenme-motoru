@@ -210,7 +210,8 @@ function parseAtom(raw: unknown, path: string, errors: string[]): ImportAtom | n
   const before = errors.length
   const subjectName = reqStr(raw, 'ders', path, errors)
   const konu = reqStr(raw, 'konu', path, errors)
-  const altbaslik = optStr(raw, 'altbaslik', path, errors) ?? optStr(raw, 'altBaslik', path, errors) ?? optStr(raw, 'alt_baslik', path, errors)
+  // "kazanim" kullanıcının sözlüğünde alt başlığın karşılığıdır (ders › ünite › kazanım); aynı alana yazılır
+  const altbaslik = optStr(raw, 'altbaslik', path, errors) ?? optStr(raw, 'altBaslik', path, errors) ?? optStr(raw, 'alt_baslik', path, errors) ?? optStr(raw, 'kazanim', path, errors) ?? optStr(raw, 'kazanım', path, errors)
   const text = reqStr(raw, 'atom', path, errors)
   const prompt = reqStr(raw, 'soru', path, errors)
   const why = optStr(raw, 'neden', path, errors)

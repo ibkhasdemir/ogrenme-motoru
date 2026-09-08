@@ -394,6 +394,8 @@ export class Motor {
     }
     const moving = c.atoms.filter((a) => a.topicId === topicId)
     for (const a of moving) await this.repo.putAtom({ ...a, topicId: target.id })
+    // kaynak konu boş kalır; adı hedefinkiyle (hedefin yazımıyla) eşitlenir ki sonraki içe aktarma eski adı görüp ayrı grup diriltmesin
+    await this.repo.putTopic({ ...topic, name: target.name })
     return { topicId: target.id, merged: true, movedAtoms: moving.length }
   }
 

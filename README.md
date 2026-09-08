@@ -62,6 +62,7 @@ Atom ve soruları tek tek yazmak yerine JSON olarak ekle (BL-38; spec dışı, s
 3. Yalnız ekler: mevcut içerik ve öğrenme geçmişi değişmez. Aynı metinli atom varsa yeniden eklenmez, sorular/çengeller ona bağlanır. Tek bir hatalı öğe varsa hiçbir şey eklenmez; hata listesi hangi öğe olduğunu söyler. Kurtarma deposu bağlıysa önce `pre_import` kurtarma noktası alınır.
 4. **Dizin:** `konu` ünite düzeyidir ve bir ders notu boyunca aynı kalır ("18. yy Osmanlı"); ayrıntı `altbaslik` alanına gider ("Küçük Kaynarca Antlaşması"). Uygulama bunu "Ünite › Alt başlık" adlı konu olarak saklar (veri modeli iki seviyeli kalır, BL-39); İçerik listesi **ünite** gruplarına ayrılır, alt başlıklar grubun içinde etiketlenir.
    - Yapay zekâ yine de üniteyi atlar ve her olayı ayrı konu yaparsa: içe aktarma ekranındaki **Ünite** alanına ünite adını yaz, bütün konular onun altına konur. Önizleme, dizin fazla parçalıysa bunu ayrıca uyarır.
+   - `altbaslik` yerine `kazanim` da yazılabilir (aynı alan): ders › ünite › kazanım.
    - Zaten eklenmiş içerik için: İçerik → **Konular** → düzeltilecekleri işaretle → Ünite yaz → "Seçilenleri ünite altına taşı". Tek konu seçiliyken yeniden adlandırabilirsin; aynı adı verirsen konular birleşir. Atomlar, sorular, öğrenme geçmişi ve vadeler değişmez.
 5. **Kendi kodlamaların:** notlarındaki kodlamaları şablon yapay zekâya "olduğu gibi ilgili atoma kodlama olarak ekle, uydurma" der. Ayrıca `cengeller` bölümüyle mevcut bir atoma sonradan çengel eklenebilir (`{ "atom": "<atom metni>", "tur": "kodlama", "metin": "…" }`; `tur` yazılmazsa kodlama).
 

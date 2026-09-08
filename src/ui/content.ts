@@ -112,8 +112,11 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
   const rest = atoms.filter((a) => a.prompt.trim())
   const search = input({ type: 'search', placeholder: 'Ara', value: query, 'aria-label': 'Ara' })
   search.addEventListener('input', () => void ctx.navigate({ name: 'content', view: { kind: 'list', query: search.value } }))
+  // atom başına soru sayısı bir kez hesaplanır (115 atom / 115 soruda listenin her satırında yeniden taramamak için)
+  const qCounts = new Map<string, number>()
+  for (const q of c.questions) if (!q.archived) qCounts.set(q.primaryAtomId, (qCounts.get(q.primaryAtomId) ?? 0) + 1)
   const row = (a: Atom, badge?: string, withCrumb = true) => {
-    const qCount = c.questions.filter((x) => x.primaryAtomId === a.id && !x.archived).length
+    const qCount = qCounts.get(a.id) ?? 0
     const due = ctx.motor.nextDueOf(a.id)
     const topic = c.topics.find((t) => t.id === a.topicId)
     const subject = topic ? c.subjects.find((s) => s.id === topic.subjectId) : undefined
@@ -139,7 +142,7 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
     if (!s) { s = { label: sub, atoms: [] }; g.subs.push(s) }
     s.atoms.push(a)
     g.count++
-    g.questions += c.questions.filter((x) => x.primaryAtomId === a.id && !x.archived).length
+    g.questions += qCounts.get(a.id) ?? 0
   }
   const openAll = !!q || groups.length === 1
   return h('div', { class: 'screen', 'data-screen': 'content' },
