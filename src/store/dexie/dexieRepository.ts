@@ -107,6 +107,19 @@ export class DexieRepository implements Repository {
     const n = await this.db.atoms.update(id, { archived: true })
     if (n === 0) throw new NotFoundError(`Atom ${id}`)
   }
+  async unarchiveAtom(id: string) {
+    const n = await this.db.atoms.update(id, { archived: false })
+    if (n === 0) throw new NotFoundError(`Atom ${id}`)
+  }
+  /** BL-46: atom + çengelleri tek transaction'da siler; ham olaylara dokunmaz (çağıran ölçüm olmadığını doğrular). */
+  async deleteAtomAndHooks(id: string) {
+    await this.db.transaction('rw', [this.db.atoms, this.db.hooks], async () => {
+      if (!(await this.db.atoms.get(id))) throw new NotFoundError(`Atom ${id}`)
+      const hookIds = await this.db.hooks.where('atomId').equals(id).primaryKeys()
+      if (hookIds.length) await this.db.hooks.bulkDelete(hookIds)
+      await this.db.atoms.delete(id)
+    })
+  }
   listHooks() { return this.db.hooks.toArray() }
   async putHook(h: MemoryHook) { await this.db.hooks.put(h) }
   listQuestions() { return this.db.questions.toArray() }

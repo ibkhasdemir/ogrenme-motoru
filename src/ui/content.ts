@@ -5,11 +5,11 @@ import { HOOK_TYPES, isCompleteRevision } from '../domain'
 import { affectedAttemptsByKeyChange } from '../engine/question/contentError'
 import { joinTopicPath, splitTopicPath } from '../engine/import/contentImport'
 import type { AppContext } from './app'
-import { button, field, formatDateTimeTr, h, input, textarea } from './dom'
+import { button, field, formatDateTimeTr, h, input, swipeRow, textarea } from './dom'
 import { HOOK_TYPE_HINT, HOOK_TYPE_LABEL, hookTypeLabel } from './labels'
 
 export type ContentView =
-  | { kind: 'list'; query?: string }
+  | { kind: 'list'; query?: string; archived?: boolean }
   | { kind: 'atom'; atomId: string }
   | { kind: 'question'; questionId: string; edit?: boolean }
   | { kind: 'history'; questionId: string }
@@ -23,7 +23,7 @@ export const KEY_ERROR_QUESTION = 'Eski cevap anahtarı hatalı mıydı?'
 
 export async function renderContent(ctx: AppContext, view: ContentView): Promise<HTMLElement> {
   switch (view.kind) {
-    case 'list': return renderList(ctx, view.query ?? '')
+    case 'list': return renderList(ctx, view.query ?? '', view.archived ?? false)
     case 'atom': return renderAtom(ctx, view.atomId)
     case 'question': return renderQuestion(ctx, view.questionId, view.edit ?? false)
     case 'history': return renderHistory(ctx, view.questionId)
@@ -144,15 +144,16 @@ function back(ctx: AppContext, view: ContentView = { kind: 'list' }): HTMLElemen
   return button('← İçerik', () => void ctx.navigate({ name: 'content', view }), { variant: 'quiet', class: 'btn-inline' })
 }
 
-async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> {
+async function renderList(ctx: AppContext, query: string, archived: boolean): Promise<HTMLElement> {
   const c = await ctx.motor.content()
   const q = query.trim().toLocaleLowerCase('tr')
-  const atoms = ctx.motor.sortedAtoms(c.atoms.filter((a) => !a.archived), c.topics, c.subjects)
+  const archivedCount = c.atoms.filter((a) => a.archived).length
+  const atoms = ctx.motor.sortedAtoms(c.atoms.filter((a) => a.archived === archived), c.topics, c.subjects)
     .filter((a) => !q || a.text.toLocaleLowerCase('tr').includes(q) || a.prompt.toLocaleLowerCase('tr').includes(q))
   const missingPrompt = atoms.filter((a) => !a.prompt.trim())
   const rest = atoms.filter((a) => a.prompt.trim())
   const search = input({ type: 'search', placeholder: 'Ara', value: query, 'aria-label': 'Ara' })
-  search.addEventListener('input', () => void ctx.navigate({ name: 'content', view: { kind: 'list', query: search.value } }))
+  search.addEventListener('input', () => void ctx.navigate({ name: 'content', view: { kind: 'list', query: search.value, archived } }))
   // atom başına soru sayısı bir kez hesaplanır (115 atom / 115 soruda listenin her satırında yeniden taramamak için)
   const qCounts = new Map<string, number>()
   for (const q of c.questions) if (!q.archived) qCounts.set(q.primaryAtomId, (qCounts.get(q.primaryAtomId) ?? 0) + 1)
@@ -162,13 +163,23 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
     const topic = c.topics.find((t) => t.id === a.topicId)
     const subject = topic ? c.subjects.find((s) => s.id === topic.subjectId) : undefined
     const crumb = withCrumb ? [subject?.name, topic?.name].filter(Boolean).join(' › ') : '' // grup içinde başlık zaten söyler
-    return h('button', { type: 'button', class: 'list-item', 'data-atom': a.id, onClick: () => void ctx.navigate({ name: 'content', view: { kind: 'atom', atomId: a.id } }) },
+    const item = h('button', { type: 'button', class: 'list-item', 'data-atom': a.id, onClick: () => void ctx.navigate({ name: 'content', view: { kind: 'atom', atomId: a.id } }) },
       h('span', { class: 'stack' },
         h('span', { class: 'text-body' }, a.text),
         h('span', { class: 'text-meta' }, [crumb, `${qCount} soru`, due ? `sonraki vade ${formatDateTimeTr(due)}` : ''].filter(Boolean).join(' · ')),
       ),
       badge ? h('span', { class: 'badge' }, badge) : null,
     )
+    // BL-46: sola kaydır → arşivle (arşivdeyken geri getir). Aynı eylemler atom ekranında da var; hareket tek yol değil.
+    return archived
+      ? swipeRow(item, {
+        label: 'Geri getir', testid: `unarchive-${a.id}`,
+        onAct: () => void (async () => { await ctx.motor.unarchiveAtom(a.id); ctx.notice('Atom geri getirildi.', 'ok'); await ctx.render() })(),
+      })
+      : swipeRow(item, {
+        label: 'Arşivle', danger: true, testid: `archive-${a.id}`,
+        onAct: () => void (async () => { await ctx.motor.archiveAtom(a.id); ctx.notice('Atom arşivlendi; listeden ve kuyruktan çıktı. Arşiv\'den geri getirebilirsin.', 'ok'); await ctx.render() })(),
+      })
   }
   // Ders › Ünite grupları, içinde alt başlıklar (dizin görünümü, BL-39): konu adındaki " › " ayracı ünite/alt başlık ayrımıdır
   const groups: { key: string; label: string; subs: { label: string | null; atoms: Atom[] }[]; count: number; questions: number }[] = []
@@ -191,6 +202,9 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
     h('div', { class: 'row' },
       button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' }),
       button('Konular', () => void ctx.navigate({ name: 'content', view: { kind: 'topics' } }), { class: 'btn-inline', testid: 'to-topics' }),
+      archived
+        ? button('← Listeye dön', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline', testid: 'to-active' })
+        : button(`Arşiv${archivedCount ? ` · ${archivedCount}` : ''}`, () => void ctx.navigate({ name: 'content', view: { kind: 'list', archived: true } }), { class: 'btn-inline', testid: 'to-archived' }),
       h('span', { class: 'text-meta' }, `${rest.length + missingPrompt.length} atom · ${groups.length} ünite`),
     ),
     search,
@@ -203,7 +217,7 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
           ...s.atoms.map((a) => row(a, undefined, false)),
         ])),
       )))
-      : (!missingPrompt.length ? h('p', { class: 'text-support' }, 'Henüz atom yok.') : null),
+      : (!missingPrompt.length ? h('p', { class: 'text-support' }, archived ? 'Arşivde atom yok.' : 'Henüz atom yok.') : null),
   )
 }
 
@@ -258,7 +272,24 @@ async function renderAtom(ctx: AppContext, atomId: string): Promise<HTMLElement>
       : h('p', { class: 'text-support' }, 'Bu atomun sorusu yok; hatırlama kartıyla çalışılır.'),
     h('div', { class: 'screen-bottom' },
       button('+ Soru ekle', () => void ctx.navigate({ name: 'questionForm', presetAtomId: atom.id }), { class: 'btn-inline' }),
-      atom.archived ? null : button('Arşivle', async () => { await ctx.motor.repo.archiveAtom(atom.id); ctx.notice('Atom arşivlendi (silinmedi).', 'ok'); await ctx.navigate({ name: 'content', view: { kind: 'list' } }) }, { variant: 'danger', class: 'btn-inline', testid: 'archive-atom' }),
+      atom.archived
+        ? button('Arşivden çıkar', async () => { await ctx.motor.unarchiveAtom(atom.id); ctx.notice('Atom geri getirildi.', 'ok'); await ctx.navigate({ name: 'content', view: { kind: 'atom', atomId } }) }, { class: 'btn-inline', testid: 'unarchive-atom' })
+        : button('Arşivle', async () => { await ctx.motor.archiveAtom(atom.id); ctx.notice('Atom arşivlendi (silinmedi).', 'ok'); await ctx.navigate({ name: 'content', view: { kind: 'list' } }) }, { variant: 'danger', class: 'btn-inline', testid: 'archive-atom' }),
+      // BL-46: kalıcı silme yalnız hiç çalışılmamış ve sorusu olmayan atomda; yoksa neden olmadığı yazılır
+      ctx.motor.hasHistory(atom.id)
+        ? h('p', { class: 'text-support', 'data-testid': 'no-delete' }, 'Bu atomun öğrenme geçmişi var: silinemez, yalnız arşivlenir. Ham cevap kayıtların korunur.')
+        : questions.length
+          ? h('p', { class: 'text-support', 'data-testid': 'no-delete' }, 'Bu atomun sorusu var: kalıcı silmek için önce soruyu arşivle.')
+          : button('Kalıcı sil', async () => {
+            try {
+              await ctx.motor.deleteAtomPermanently(atom.id)
+              ctx.notice('Atom kalıcı olarak silindi (hiç çalışılmamıştı).', 'ok')
+              await ctx.navigate({ name: 'content', view: { kind: 'list' } })
+            } catch (e) {
+              ctx.notice((e as Error).message, 'error')
+              await ctx.render()
+            }
+          }, { variant: 'danger', class: 'btn-inline', testid: 'delete-atom' }),
     ),
   )
 }

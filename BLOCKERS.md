@@ -121,6 +121,13 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Karar: ekran geçişleri tarayıcı geçmişine yazılır (`pushState`; aynı ekran içi durum değişimi `replaceState` ile geçmişi şişirmez) → iOS kenar kaydırma ve Android geri tuşu çalışır; `popstate` çalışma ekranından çıkışta oturumu bırakır (yarım cevap kaydedilmez, `07` §1.1). Ekran başlığı yapışkan, alt eylem çubuğu yatay kaydırmalı ve güvenli alan boşluklu.
 - Durum: **KAPANDI**. Testler: `tests/phase16-ai-ux.test.ts` ("geri" ve "çalışma ekranından geri").
 
+### BL-46 — Yanlış girilen içeriği temizleme: kaydırıp arşivle + koşullu kalıcı silme
+- Bölüm: `07` S11 ("arşivle (silme yok)"), `00` A3 (ham olaylar append-only), A21 (geri kazanılabilirlik), `14` §11/§13 (dokunma ergonomisi).
+- Gözlem (2026-09-09): kullanıcı yanlış girilen atomu silmek istedi ("silme yok ki") ve iOS kaydırma hareketi bekliyor.
+- Karar: **arşivleme kaydırma hareketiyle erişilebilir** (sola kaydır → Arşivle; arşiv görünümünde → Geri getir). Hareket TEK yol değildir: aynı eylemler atom ekranında düğme olarak durur (erişilebilirlik, masaüstü). Ek olarak **kalıcı silme**, yalnız (a) o atomu işaret eden hiçbir Attempt yoksa (void edilmiş dâhil) ve (b) atoma bağlı soru yoksa mümkündür; aksi hâlde neden silinemediği yazılır. Böylece "silme yok" kuralının amacı (ham geçmişin yetim kalmaması) korunur, kullanıcının gerçek ihtiyacı (yanlışlıkla eklenen içeriği temizlemek) karşılanır.
+- Depo: `unarchiveAtom`, `deleteAtomAndHooks` (atom + çengelleri, tek transaction). Ham olay silen bir API YOKTUR.
+- Durum: **KAPANDI**. Testler: `tests/phase17-archive-delete.test.ts`.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

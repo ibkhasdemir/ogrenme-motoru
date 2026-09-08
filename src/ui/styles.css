@@ -216,3 +216,17 @@ details.group > .group-body { padding: 0 var(--space-2) var(--space-2); }
 .nav-bar::-webkit-scrollbar { display: none; }
 .nav-bar > .btn { flex: 0 0 auto; white-space: nowrap; }
 .nav-badge { margin-left: var(--space-1); padding: 0 var(--space-2); border-radius: 999px; background: var(--color-accent); color: var(--color-accent-contrast); font-size: var(--type-micro); font-weight: var(--weight-semibold); }
+
+/* --- BL-46 kaydırıp arşivle/sil (iOS alışkanlığı). Hareket tek yol değildir: aynı eylem atom ekranında da vardır. --- */
+.swipe-row { position: relative; overflow: hidden; border-radius: var(--radius-sm); }
+.swipe-row > .swipe-action {
+  position: absolute; inset: 0 0 0 auto; width: 104px;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--radius-sm);
+  background: var(--color-warning); color: var(--color-accent-contrast);
+  font: inherit; font-size: var(--type-support); font-weight: var(--weight-semibold); cursor: pointer;
+}
+.swipe-row > .swipe-action.is-danger { background: var(--color-error); }
+.swipe-surface { position: relative; background: var(--color-background); transition: transform var(--motion-fast) var(--motion-easing); will-change: transform; }
+.swipe-surface > .list-item { background: var(--color-background); }
+@media (prefers-reduced-motion: reduce) { .swipe-surface { transition: none; } }

@@ -70,3 +70,48 @@ export function formatDateTimeTr(iso: string): string {
   const d = new Date(iso)
   return `${d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} ${d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`
 }
+
+/**
+ * iOS tarzı "kaydırıp sil" (BL-45/BL-46): satır sola kaydırılınca altındaki eylem açılır.
+ * Dokunma yoksa (masaüstü, ekran okuyucu) satırın kendi düğmeleri hep erişilebilir kalır — hareket tek yol DEĞİLDİR.
+ */
+export function swipeRow(content: HTMLElement, action: { label: string; danger?: boolean; testid?: string; onAct: () => void }): HTMLElement {
+  const OPEN_AT = 60
+  const WIDTH = 104
+  const actionBtn = h('button', {
+    type: 'button', class: `swipe-action${action.danger ? ' is-danger' : ''}`,
+    ...(action.testid ? { 'data-testid': action.testid } : {}),
+    onClick: (ev: Event) => { ev.stopPropagation(); action.onAct() },
+  }, action.label)
+  const surface = h('div', { class: 'swipe-surface' }, content)
+  const row = h('div', { class: 'swipe-row' }, actionBtn, surface)
+  let startX = 0
+  let startY = 0
+  let dx = 0
+  let open = false
+  let tracking = false
+  const setX = (x: number) => { surface.style.transform = x ? `translateX(${x}px)` : '' }
+  surface.addEventListener('touchstart', (e: TouchEvent) => {
+    const t = e.touches[0]
+    if (!t) return
+    startX = t.clientX; startY = t.clientY; dx = 0; tracking = true
+  }, { passive: true })
+  surface.addEventListener('touchmove', (e: TouchEvent) => {
+    const t = e.touches[0]
+    if (!tracking || !t) return
+    const mx = t.clientX - startX
+    const my = t.clientY - startY
+    if (Math.abs(my) > Math.abs(mx)) { tracking = false; return } // dikey kaydırma listeye ait
+    dx = Math.max(-WIDTH, Math.min(0, mx + (open ? -WIDTH : 0)))
+    setX(dx)
+  }, { passive: true })
+  const end = () => {
+    if (!tracking) return
+    tracking = false
+    open = dx <= -OPEN_AT
+    setX(open ? -WIDTH : 0)
+  }
+  surface.addEventListener('touchend', end)
+  surface.addEventListener('touchcancel', end)
+  return row
+}

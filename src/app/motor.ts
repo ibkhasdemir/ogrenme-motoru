@@ -528,6 +528,37 @@ export class Motor {
     return { topicId: target.id, merged: true, movedAtoms: moving.length }
   }
 
+  // --- İçerik temizliği (BL-46) ---
+
+  /** 07 S11: arşivlenen atom kuyruktan ve listeden çıkar; ham geçmiş ve vadeler durur, geri getirilebilir. */
+  async archiveAtom(atomId: string): Promise<void> {
+    await this.beforeWrite()
+    await this.repo.archiveAtom(atomId)
+  }
+
+  async unarchiveAtom(atomId: string): Promise<void> {
+    await this.beforeWrite()
+    await this.repo.unarchiveAtom(atomId)
+  }
+
+  /** Bu atomu işaret eden (void edilmiş dâhil) ham kayıt var mı — kalıcı silmenin tek engeli. */
+  hasHistory(atomId: string): boolean {
+    return this.attempts.some((a) => a.primaryAtomIdAtAttempt === atomId)
+  }
+
+  /**
+   * BL-46 — kalıcı silme: YALNIZ hiç ölçülmemiş ve sorusu olmayan atom. Ham olay silinmez (A3); bir kayıt varsa
+   * arşivlemeye yönlendirilir. Soru varsa önce o soru arşivlenmeli (soru sürümleri de ham geçmişe bağlıdır).
+   */
+  async deleteAtomPermanently(atomId: string): Promise<void> {
+    await this.beforeWrite()
+    const c = await this.content()
+    if (!c.atoms.some((a) => a.id === atomId)) throw new MotorError(`Atom bulunamadı: ${atomId}`)
+    if (this.hasHistory(atomId)) throw new MotorError('Bu atomun öğrenme geçmişi var; silinemez, arşivlenir.')
+    if (c.questions.some((q) => q.primaryAtomId === atomId)) throw new MotorError('Bu atomun sorusu var; önce soruyu arşivle.')
+    await this.repo.deleteAtomAndHooks(atomId)
+  }
+
   /** Mevcut atoma çengel ekler (içe aktarma "cengeller" bölümü, BL-38). Aynı metinli çengel varsa yeniden eklenmez → false. */
   async addHook(atomId: string, hook: { type: HookType; content: string }): Promise<boolean> {
     await this.beforeWrite()

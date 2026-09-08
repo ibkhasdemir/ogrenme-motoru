@@ -116,6 +116,13 @@ export interface Repository {
   getAtom(id: string): Promise<Atom | undefined>
   putAtom(a: Atom): Promise<void>
   archiveAtom(id: string): Promise<void>
+  /** arşivden çıkar (07 S11: arşivleme geri alınabilir) */
+  unarchiveAtom(id: string): Promise<void>
+  /**
+   * BL-46 — kalıcı silme YALNIZ hiç ölçülmemiş içerik için (çağıran doğrular): atom + çengelleri.
+   * Ham olaylara dokunmaz; bir Attempt bu atomu işaret ediyorsa çağıran zaten arşivlemeye yönlendirir.
+   */
+  deleteAtomAndHooks(id: string): Promise<void>
   listHooks(): Promise<MemoryHook[]>
   putHook(h: MemoryHook): Promise<void>
   listQuestions(): Promise<Question[]>
