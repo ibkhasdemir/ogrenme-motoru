@@ -21,7 +21,8 @@ export interface MemoryState {
   state: MemoryStateCode
   learningSteps: number
   lastReview: string | null
-  lastAttemptKind: AttemptKind
+  /** null yalnız hiç saklanmayan New (emptyState) durumunda; applyAttempt her zaman doldurur (02 §5.2 6h). */
+  lastAttemptKind: AttemptKind | null
   lastQuestionId?: string
 }
 

@@ -10,7 +10,7 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 
 | Durum | Sayı |
 |---|---|
-| Karar bekliyor (§1) | 9 (+ §3 faz planı onayı) |
+| Karar bekliyor (§1) | 10 (+ §3 faz planı onayı — onaylandı 2026-09-08, varsayılanlarla) |
 | Çözüldü (§2) | 23 |
 | Kapandı (§4) | 1 |
 
@@ -59,6 +59,13 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 ### BL-11 — S7 "Son kartı geri al" çubuğunun yeri
 - Bölüm: `07` S7 ("bir sonraki öğeye geçmeden önce … ekran altında en fazla 30 sn çubuk"; S7'de Devam düğmesi yok) ↔ `07` §3 ("öz değerlendirme → Attempt → nextItem"), E-07 ("Hatırladım → sonraki"), `07` §1.1 (Cevapla / Geri al bitişik değil).
 - Varsayılan: öz değerlendirme sonrası `nextItem` hemen çağrılır; çubuk sonraki ekranın altında 30 sn kalır, birincil eylemle arasında boşluk bırakılır (bitişik değil).
+- Durum: **KARAR BEKLİYOR.**
+
+### BL-36 — `maximumInterval = 365` pinli kütüphanede sert tavan değil (Good = 366 gün)
+- Bölüm: `02` §4 ("`maximumInterval = 365`: sınav ufku; bir yılı aşan aralık üretilmez"), `08` U-SC-10 ("due ≤ now + 365 gün") ↔ ts-fsrs 5.4.2 gerçeği.
+- Gözlem (2026-09-08, betikle ölçüldü): Review durumunda çok yüksek stability ile Hard aralığı 365'e kırpılır; kütüphane Good'u en az `Hard + 1` yaptığı için Good = **366** gün, Easy = 367 gün (Easy v0'da üretilmez). `maximum_interval: 364` verilirse Good = 365 olur.
+- Varsayılan: `02` §4 değeri (365) ve kütüphane çıktısı aynen korunur; uygulama aralığa gün eklemez/çıkarmaz (`02` §3.1a); U-SC-10 gerçek üst sınırı (`maximumInterval + 1`) belgeler. Pratik etki yok (stability 100.000 gerçekçi değil).
+- Alternatif: `maximumInterval: 364` (`configVersion += 1`, REBUILD; `02` §4 düzeltmesi gerekir).
 - Durum: **KARAR BEKLİYOR.**
 
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
