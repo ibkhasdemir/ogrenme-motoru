@@ -11,6 +11,7 @@ import { currentReminder, reminderLine, type BackupSectionState, type BackupServ
 import { hookTypeLabel } from './labels'
 import { renderContentImport, type ImportUiState } from './contentImport'
 import { emptyCaptureState, renderCapture, renderInbox, type CaptureUiState } from './capture'
+import { renderProgress } from './progress'
 import { restoreDeps, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { emergencyRollback } from '../app/restore'
 import type { UpdateController } from '../pwa/register'
@@ -27,6 +28,7 @@ export type Screen =
   | { name: 'import' }
   | { name: 'capture' }
   | { name: 'inbox' }
+  | { name: 'progress' }
   | { name: 'data' }
   | { name: 'lockdown'; reason: string; jobId: string | null }
 
@@ -236,6 +238,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       case 'import': return renderContentImport(ctx, deps.services, importState)
       case 'capture': return renderCapture(ctx, captureState)
       case 'inbox': return renderInbox(ctx, captureState)
+      case 'progress': return renderProgress(ctx)
       case 'data': return renderData(ctx, { services: deps.services, backupState, restoreState })
       case 'lockdown': return renderLockdown(screen)
     }
@@ -306,6 +309,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
           button('+ Atom', () => void ctx.navigate({ name: 'atomForm' }), { class: 'btn-inline' }),
           button('+ Soru', () => void ctx.navigate({ name: 'questionForm' }), { class: 'btn-inline' }),
           button('İçerik', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline' }),
+          button('İlerleme', () => void ctx.navigate({ name: 'progress' }), { class: 'btn-inline', testid: 'to-progress' }),
           button('Veri', () => void ctx.navigate({ name: 'data' }), { class: 'btn-inline' }),
         ),
       ),

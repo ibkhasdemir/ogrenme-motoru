@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 296 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 303 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -52,6 +52,16 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 - **Tüm veriyi sıfırla**: iki onay; öncesinde kurtarma noktası.
 - Eski sürümle alınmış yedekler (format 1) okunur ve bellekte güncel formata çevrilir; eski soru sürümlerinin metni yoksa "eski veri modelinde saklanmadığı için mevcut değil" olarak işaretlenir, uydurulmaz.
 - Farklı bir zamanlayıcı sürümüyle alınan yedek: ham geçmiş ve içerik olduğu gibi yüklenir, hafıza durumu kurulu motorla yeniden hesaplanır (uyarı gösterilir).
+
+## İlerleme (Bugün → İlerleme)
+
+"Nerede zayıfım" ekranı (BL-42). Yalnız **sayılan** şeyler gösterilir: uydurulmuş puan, indeks ya da tahmin yoktur. Ekran ne çalışacağına karar vermez; sıralama ve vadeler değişmez.
+
+- **Özet** (son 30 gün): cevaplanan, başarısız, doğruluk, çalışılan gün. Cevap sayısı 5'in altındaysa oran gösterilmez, "yeterli veri yok" der.
+- **Emindim ama yanlıştı**: en tehlikeli sınıf. Bunlar bilmediğin değil, **yanlış bildiğin** şeyler. Soruda "Eminim" deyip yanlış yaptıkların ve kutuda "Yanlış yaptım + emindim" dediklerin buraya düşer.
+- **Zorlandıkların**: üst üste başarısız olduğun atomlar önce. Dışarıdan (kutudan) gelen başarısızlıklar ayrıca sayılır.
+- **Konular**: her konuda kaç atom var, kaçını çalıştın, kaç cevap ve doğruluk.
+- Geri alınan cevaplar hiçbir sayıma girmez; ham kayıt yine silinmez.
 
 ## Öğrenme Kutusu (+ Yakala → Kutu)
 
