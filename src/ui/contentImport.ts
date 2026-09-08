@@ -2,6 +2,7 @@
 // Yalnız ekler; mevcut içerik ve öğrenme geçmişi değişmez. Hatalı öğe varsa hiçbir şey eklenmez.
 import { isCompleteRevision } from '../domain'
 import { applyContentImport, planIsEmpty } from '../app/contentImport'
+import { generateImportPlan } from '../app/aiImport'
 import type { RecoveryDeps } from '../app/recoveryPoints'
 import { CONTENT_IMPORT_FORMAT, applyUnitToPlan, parseContentImport, planContentImport, summarizePlan, unitWarning, type ExistingContent, type ImportPlan } from '../engine/import/contentImport'
 import type { AppContext } from './app'
@@ -10,6 +11,8 @@ import type { RestoreServices } from './dataRestore'
 import { button, field, h, input, textarea } from './dom'
 
 export interface ImportUiState {
+  /** yapay zekâ üretimi sürerken düğmeler kilitli; iptal edilebilir */
+  generating: boolean
   text: string
   /** ders notu: şablonla birlikte tek parça olarak paylaşılır (kullanıcı iki yerde kopyala-yapıştır yapmasın) */
   notes: string
@@ -111,7 +114,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
 
   const notesIn = textarea({ placeholder: 'Ders notunu buraya yapıştır (isteğe bağlı)', 'aria-label': 'Ders notu', rows: 4, 'data-testid': 'import-notes' })
   notesIn.value = state.notes
-  notesIn.addEventListener('input', () => { state.notes = notesIn.value })
+  notesIn.addEventListener('input', () => { state.notes = notesIn.value; generateBtn.disabled = state.generating || !state.notes.trim() })
 
   const unitIn = input({ placeholder: 'İsteğe bağlı — örn. 18. yy Osmanlı', 'aria-label': 'Ünite', autocomplete: 'off', 'data-testid': 'import-unit' })
   unitIn.value = state.unit
@@ -187,9 +190,35 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
     }
   }
 
+  // BL-44: uygulama içi yapay zekâ — anahtar varsa notu doğrudan burada JSON'a çevirir (şablonu sohbete taşımak gerekmez)
+  const ai = ctx.ai?.()
+  const generate = async () => {
+    if (!ai || state.generating) return
+    state.generating = true
+    state.error = null
+    await ctx.render()
+    try {
+      const out = await generateImportPlan(ai, {
+        notes: state.notes, unit: state.unit, existing: await existingContent(ctx), buildPrompt,
+      })
+      // gelen ham metin kutuya da düşer: "Ekle" tek yoldan (aynı doğrulama) geçer ve kullanıcı isterse elle düzeltir
+      state.text = out.raw
+      state.plan = out.plan
+      if (out.plan.errors.length) ctx.notice('Yapay zekâ çıktısında sorun var; aşağıdaki hatalara bak, notu sadeleştirip yeniden dene.', 'error')
+    } catch (e) {
+      state.plan = null
+      state.error = (e as Error).message
+    } finally {
+      state.generating = false
+      await ctx.render()
+    }
+  }
+
+  const generateBtn = button(state.generating ? 'Üretiliyor…' : 'Yapay zekâ ile üret', () => void generate(), { variant: 'primary', disabled: state.generating || !state.notes.trim(), testid: 'ai-generate' })
+
   const plan = state.plan
   const warning = plan && !plan.errors.length ? unitWarning(plan) : null
-  const canApply = !!plan && !plan.errors.length && !planIsEmpty(plan) && !state.busy
+  const canApply = !!plan && !plan.errors.length && !planIsEmpty(plan) && !state.busy && !state.generating
   const toList = () => void ctx.navigate({ name: 'content', view: { kind: 'list' } })
   return h('div', { class: 'screen', 'data-screen': 'import' },
     h('div', { class: 'row' }, button('← İçerik', toList, { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik içe aktar')),
@@ -199,7 +228,15 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
       canShareText() ? button('Şablonu paylaş', () => void shareTemplate(), { class: 'btn-inline', testid: 'share-template' }) : null,
       button('Şablonu kopyala', () => void copyTemplate(), { class: 'btn-inline', testid: 'copy-template' }),
     ),
-    field('Ders notun (isteğe bağlı)', notesIn, 'Buraya yapıştırırsan şablonla birlikte tek parça gider; sohbette ikinci yapıştırma gerekmez.'),
+    field(ai ? 'Ders notun' : 'Ders notun (isteğe bağlı)', notesIn, ai
+      ? 'Yapıştır ve "Yapay zekâ ile üret" de: atomlar ve sorular burada oluşur, önizlemeden sonra eklenir.'
+      : 'Buraya yapıştırırsan şablonla birlikte tek parça gider; sohbette ikinci yapıştırma gerekmez.'),
+    ai
+      ? h('div', { class: 'stack' },
+        generateBtn,
+        h('p', { class: 'text-support' }, 'Notun senin anahtarınla sağlayıcıya gider; gelen içerik önce önizlenir, onaylamadan hiçbir şey eklenmez.'),
+      )
+      : h('p', { class: 'text-support', 'data-testid': 'ai-hint' }, 'Yapay zekâyı uygulamanın içinde kullanmak istersen Veri ekranından kendi anahtarını gir; o zaman notu buraya yapıştırıp tek dokunuşla üretebilirsin.'),
     h('details', { 'data-keep-key': 'import-template' }, h('summary', { class: 'text-support' }, 'Şablonu göster'), h('pre', { class: 'import-template', 'data-testid': 'import-template' }, IMPORT_PROMPT_TEMPLATE)),
     h('div', { class: 'row' },
       canReadClipboard() ? button('Panodan yapıştır', () => void pasteFromClipboard(), { variant: 'secondary', class: 'btn-inline', testid: 'paste-import' }) : null,

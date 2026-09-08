@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 304 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 312 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -38,6 +38,7 @@ Telefonda el ile kontrol listesi: `docs/PHONE_CHECK.md` (V-01…V-15, M-01…M-1
 - **Hatırlama kartı**: soru yüzü → (Çengeli göster) → Cevabı aç → Hatırladım / Zorlandım / Hatırlayamadım.
 - **Geri al**: kayıttan sonraki 30 saniye içinde, bir kez; aynı öğe aynı sürümle bir kez yeniden sunulur. Ham kayıt silinmez, `AttemptVoid` yazılır.
 - **+ Atom**: ders, konu, atom cümlesi ve **soru yüzü** zorunlu. **+ Soru**: soru, 2–5 seçenek, doğru seçenek, ana atom, kaynak zorunlu.
+- **Geri**: her ekran tarayıcı geçmişine yazılır; iPhone'da kenardan kaydırma, Android'de geri tuşu çalışır. Ekranın üstündeki "←" satırı yapışkandır, kaydırırken kaybolmaz.
 - **İçerik**: ünite gruplu atom/soru listesi, arşivle (silme yok), soru düzenleme yeni sürüm üretir, sürüm geçmişi. Atom ekranından **çengel ekle** ile kendi kodlamanı sonradan ekleyebilirsin. **Konular** ekranı konuları ünite altında toplar / birleştirir.
 
 ## Yedek ve geri yükleme (Veri ekranı)
@@ -78,6 +79,17 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 - Köken bilgisi atoma işlenir: aylar sonra "bunu şu denemede yemiştim" izini korur.
 - İşlerken **"Bunu soru olarak da ekle"** işaretlersen, kaydettikten sonra soru formu ham metin ve seçtiğin atomla açılır (05 §3.3 adım 2).
 - Kutu öğeleri olay değildir: düzenlenebilir, atılabilir (silinmez, "atıldı" olur) ve hafızaya hiç dokunmaz.
+
+## Uygulama içi yapay zekâ (isteğe bağlı)
+
+Ders notunu şablonla dışarı taşımak yerine doğrudan uygulamada atomlara çevirebilirsin (BL-44). **Kendi API anahtarınla** çalışır; sunucumuz yoktur.
+
+1. Veri → **Yapay zekâ** → sağlayıcıyı seç (Claude, ChatGPT ya da Gemini), anahtarını yapıştır, **Kaydet**. İstersen **Bağlantıyı dene**.
+2. İçerik → İçe aktar → ders notunu yapıştır → **Yapay zekâ ile üret**. Gelen içerik önizlemeye düşer, **Ekle** demeden hiçbir şey yazılmaz (A18: yapay zekâ onaysız bilgi modelini değiştiremez).
+3. Anahtar **yalnız bu cihazda** durur (tarayıcı yerel deposu). Yedek dosyasına girmez, geri yükleme silmez, bize gelmez. Çevrimdışıyken yapay zekâ çalışmaz, uygulamanın geri kalanı çalışır.
+4. Anahtar girmezsen hiçbir şey değişmez: şablonu kopyalayıp dışarıda kullanmaya devam edersin.
+
+Maliyet senin sağlayıcı hesabındadır; uzun notlarda birkaç kuruşluk kullanım olur.
 
 ## İçerik içe aktarma (İçerik → İçe aktar)
 

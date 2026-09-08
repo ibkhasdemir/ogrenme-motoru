@@ -1,8 +1,10 @@
 // 07 S12 Veri / Ayarlar — dört bölüm: Yedek al · Yedekten geri yükle · Kurtarma noktaları · Motor (+ Tüm veriyi sıfırla, iki onay).
 // Yıkıcı yollar yalnız kurtarma servisleri (RecoveryStore + RestoreJournal) bağlıyken görünür (11 kural 31).
+import type { AiSettingsStore } from '../app/aiSettings'
 import { SCHEMA_VERSION } from '../store/repository'
 import type { AppContext } from './app'
 import { currentReminder, renderBackupSection, type BackupSectionState, type BackupServices } from './dataBackup'
+import { renderAiSection, type AiSectionState } from './dataAi'
 import { renderResetControls, renderRestoreSections, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { button, field, formatDateTimeTr, h, input } from './dom'
 
@@ -10,6 +12,8 @@ export interface DataScreenDeps {
   services?: BackupServices
   backupState: BackupSectionState
   restoreState: { restore: RestoreUiState }
+  /** BL-44: yapay zekâ ayarları (anahtar cihazda); depo verilmezse bölüm çıkmaz */
+  ai?: { store: AiSettingsStore; state: AiSectionState }
 }
 
 function hasRestore(s: BackupServices | undefined): s is RestoreServices {
@@ -38,6 +42,7 @@ export async function renderData(ctx: AppContext, d: DataScreenDeps): Promise<HT
     h('div', { class: 'row' }, button('← Bugün', () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Veri')),
     backupSection,
     ...restoreSections,
+    d.ai ? renderAiSection(ctx, d.ai.store, d.ai.state) : null,
     h('section', { class: 'card stack', 'data-section': 'motor' },
       h('h2', { class: 'text-section' }, 'Motor'),
       button('Hafızayı yeniden hesapla', async () => { await m.refresh(); ctx.notice('Hafıza durumu öğrenme geçmişinden yeniden hesaplandı.', 'ok'); await ctx.render() }, { testid: 'rebuild' }),

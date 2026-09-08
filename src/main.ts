@@ -4,6 +4,8 @@ import './ui/styles.css'
 import { Motor } from './app/motor'
 import { ensureDailyPoint, ensurePostMigrationPoint, writePreMigrationPoint } from './app/recoveryPoints'
 import { resolveOpenJobs } from './app/restore'
+import { LocalAiSettings } from './app/aiSettings'
+import { WebAiService } from './platform/web/ai'
 import { WebBackupFileService } from './platform/web/backupFile'
 import { WebClock } from './platform/web/clock'
 import { WebCryptoHashService } from './platform/web/hash'
@@ -62,11 +64,14 @@ async function boot(): Promise<void> {
     if (persist) void persist.catch(() => undefined)
     const updates = createUpdateController()
     void registerServiceWorker(updates) // 13 §7: arka planda; çekirdek yolu ağ beklemez
+    const aiSettings = new LocalAiSettings()
     const app = mountApp(root, {
       motor,
       appVersion: APP_VERSION,
       services: { files, hash, recovery, journal },
       updates,
+      aiSettings,
+      ai: () => { const cfg = aiSettings.read(); return cfg ? new WebAiService(cfg) : null },
       onRecoveryDump: async () => {
         const dump = await readRecoveryDump(MAIN_DB_NAME, clock.now())
         await files.save({ name: recoveryDumpFileName(new Date().toISOString().replace(/[:.]/g, '-')), content: JSON.stringify(dump), mime: 'application/json' })

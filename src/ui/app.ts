@@ -15,6 +15,9 @@ import { renderProgress } from './progress'
 import { restoreDeps, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { emergencyRollback } from '../app/restore'
 import type { UpdateController } from '../pwa/register'
+import type { AiService } from '../platform/ai'
+import type { AiSettingsStore } from '../app/aiSettings'
+import { emptyAiState, type AiSectionState } from './dataAi'
 
 export type Screen =
   | { name: 'today' }
@@ -41,6 +44,10 @@ export interface AppDeps {
   onRecoveryDump?: () => Promise<void>
   /** 13 §7: bekleyen yeni sürüm → yalnız Bugün/Veri ekranında "Yeni sürüm hazır · Yenile"; Yenile yalnız bu istemciyi yeniler */
   updates?: UpdateController
+  /** BL-44: geçerli anahtar varsa yapay zekâ servisi üretir; yoksa null döner */
+  ai?: () => AiService | null
+  /** BL-44: anahtar ayarları deposu (cihaz içi); verilmezse Veri ekranında yapay zekâ bölümü çıkmaz */
+  aiSettings?: AiSettingsStore
 }
 
 export interface AppContext {
@@ -54,6 +61,8 @@ export interface AppContext {
   afterDataReplaced(): Promise<void>
   /** 06 §8.6: acil geri dönüş de başarısız → yazma-kilitli kurtarma ekranı */
   lockdown(reason: string, jobId: string | null): Promise<void>
+  /** BL-44: kullanıcı kendi anahtarını girdiyse yapay zekâ servisi; yoksa null (uygulama tam çalışır) */
+  ai?: () => AiService | null
 }
 
 export interface AppHandle {
@@ -80,14 +89,32 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   let noticeState: { text: string; kind: 'ok' | 'error' | 'info' } | null = null
   let renderSeq = 0
   const backupState: BackupSectionState = { pendingConfirm: null, lastMessage: null }
-  const importState: ImportUiState = { text: '', notes: '', unit: '', plan: null, error: null, busy: false }
+  const importState: ImportUiState = { text: '', notes: '', unit: '', plan: null, error: null, busy: false, generating: false }
   const captureState: CaptureUiState = emptyCaptureState()
+  const aiState: AiSectionState = emptyAiState()
+
+  // Geri hareketi (BL-45): her ekran geçişi tarayıcı geçmişine yazılır. iOS ana ekran uygulamasında kenardan kaydırma ve
+  // Android'de donanım geri tuşu bunu kullanır; ayrıca ekranın üstündeki "←" hep yapışık durur.
+  const stack: Screen[] = [{ name: 'today' }]
+  let popping = false
+  const historyOk = typeof history !== 'undefined' && typeof history.pushState === 'function'
 
   const ctx: AppContext = {
     motor,
     appVersion: deps.appVersion,
     get session() { return session },
-    async navigate(s) { screen = s; await render() },
+    async navigate(s) {
+      const sameKind = screen.name === s.name
+      screen = s
+      if (!popping && historyOk) {
+        // aynı ekranın içindeki durum değişimi (arama yazarken) geçmişi şişirmesin
+        if (sameKind) history.replaceState({ motorDepth: stack.length }, '')
+        else { stack.push(s); history.pushState({ motorDepth: stack.length }, '') }
+      } else if (sameKind) {
+        stack[stack.length - 1] = s
+      }
+      await render()
+    },
     render: () => render(),
     notice(text, kind = 'info') { noticeState = { text, kind } },
     async afterDataReplaced() {
@@ -97,6 +124,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       backupState.lastMessage = null
       await motor.refresh()
     },
+    ...(deps.ai ? { ai: deps.ai } : {}),
     async lockdown(reason, jobId) {
       session = null
       screen = { name: 'lockdown', reason, jobId }
@@ -104,6 +132,25 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     },
   }
   const restoreState: { restore: RestoreUiState } = { restore: { step: 'idle', message: null, error: null } }
+
+  const STUDY_SCREENS = new Set(['read', 'question', 'recall', 'end'])
+  const onPopState = () => {
+    popping = true
+    try {
+      stack.pop()
+      const prev = stack[stack.length - 1] ?? { name: 'today' as const }
+      if (STUDY_SCREENS.has(screen.name)) { session = null; undoBar = null } // yarım cevap kaydedilmez (07 §1.1)
+      screen = prev
+      if (stack.length === 0) stack.push(prev)
+      void render()
+    } finally {
+      popping = false
+    }
+  }
+  if (historyOk) {
+    history.replaceState({ motorDepth: 1 }, '')
+    window.addEventListener('popstate', onPopState)
+  }
 
   function nowMono(): number { return motor.clock.monotonicMs() }
 
@@ -239,7 +286,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       case 'capture': return renderCapture(ctx, captureState)
       case 'inbox': return renderInbox(ctx, captureState)
       case 'progress': return renderProgress(ctx)
-      case 'data': return renderData(ctx, { services: deps.services, backupState, restoreState })
+      case 'data': return renderData(ctx, { services: deps.services, backupState, restoreState, ...(deps.aiSettings ? { ai: { store: deps.aiSettings, state: aiState } } : {}) })
       case 'lockdown': return renderLockdown(screen)
     }
   }
@@ -300,8 +347,9 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
           ),
         )
         : h('div', { class: 'card' }, renderText(hasAtoms ? 'Şu an vadesi gelen bir şey yok. Motor zamanı geldiğinde getirir.' : 'Henüz atom yok', 'text-body')),
+      // 14 §11: alt çubuk tek satırda, yatay kaydırmalı; sık kullanılan iki eylem başta
       h('div', { class: 'screen-bottom' },
-        h('div', { class: 'row' },
+        h('div', { class: 'nav-bar', role: 'group', 'aria-label': 'Gezinme' },
           button('+ Yakala', () => void ctx.navigate({ name: 'capture' }), { class: 'btn-inline', testid: 'to-capture' }),
           pending > 0
             ? button(`Kutu · ${pending}`, () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox' })
@@ -527,7 +575,12 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     ctx,
     getScreen: () => screen,
     render,
-    destroy() { if (undoTimer) clearTimeout(undoTimer); unsubscribeUpdates?.(); clear(root) },
+    destroy() {
+      if (historyOk) window.removeEventListener('popstate', onPopState)
+      if (undoTimer) clearTimeout(undoTimer)
+      unsubscribeUpdates?.()
+      clear(root)
+    },
     setVisible(visible) { if (!session) return; if (visible) session.resume(); else session.pause() },
   }
 }

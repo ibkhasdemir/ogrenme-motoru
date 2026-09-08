@@ -183,3 +183,36 @@ details.group > .group-body { padding: 0 var(--space-2) var(--space-2); }
 .group-sub { margin: var(--space-2) 0 var(--space-1); font-size: var(--type-support); line-height: var(--lh-support); color: var(--color-text-secondary); border-left: 3px solid var(--color-border); padding-left: var(--space-2); }
 .topic-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: var(--space-2) var(--space-3); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .topic-row input[type="checkbox"] { width: 1.4rem; height: 1.4rem; flex: none; }
+
+/* --- BL-45 gezinme ve dokunma ergonomisi (14 §11, §13) ---
+   Yapışkan başlık: "←" her zaman parmak menzilinde; uzun listede yukarı kaydırmak gerekmez.
+   Alt eylem çubuğu: güvenli alan boşluğuyla, yatay kaydırmalı; düğmeler ekranı taşırsa kırpılmaz. */
+.screen > .row:first-child {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-4));
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-background);
+  border-bottom: 1px solid transparent;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.screen > .row:first-child > .text-title { margin: 0; }
+.screen > .row:first-child.is-stuck { border-bottom-color: var(--color-border); }
+
+.screen-bottom { padding-bottom: max(var(--space-2), env(safe-area-inset-bottom)); }
+.nav-bar {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: var(--space-1);
+  margin: 0 calc(-1 * var(--space-4));
+  padding-inline: var(--space-4);
+  scroll-padding-inline: var(--space-4);
+}
+.nav-bar::-webkit-scrollbar { display: none; }
+.nav-bar > .btn { flex: 0 0 auto; white-space: nowrap; }
+.nav-badge { margin-left: var(--space-1); padding: 0 var(--space-2); border-radius: 999px; background: var(--color-accent); color: var(--color-accent-contrast); font-size: var(--type-micro); font-weight: var(--weight-semibold); }

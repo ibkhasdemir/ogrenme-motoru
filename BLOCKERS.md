@@ -107,6 +107,20 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Bilinçli kapsam dışı: grafik/çizelge (10 §1 Görselleştirme), ders ağırlığı/öncelik formülü, sınav günü projeksiyonu, tekrarlayan dış başarısızlık sinyali (`05` §4: "v0.5'te sadece sayılır, gösterilmez"), süre/performans eğrisi.
 - Durum: **KAPANDI**. Modüller: `src/engine/analysis/stats.ts` (saf), `src/ui/progress.ts`; testler `tests/phase15-progress.test.ts`.
 
+### BL-44 — Uygulama içi yapay zekâ (spec: M4; LLM v0'da yasak)
+- Bölüm: `10` §1 ("Yapay zekâ: LLM çağrısı, prompt, API anahtarı… M4"), `00` A18 (yapay zekâ onaysız kalıcı bilgi modelini değiştiremez), `05` §3.4, `06` §11 (PlatformServices sınırı), `10` §1 Altyapı ("backend yok").
+- Gözlem (2026-09-09): kullanıcı şablonu dışarı taşıyıp JSON'u geri getirmeyi "amelelik" olarak niteledi ve uygulamanın içinde yapay zekâ istedi.
+- Karar (sahibi): **eklendi** — Phase 16, sınırlarla. `AiService` PlatformServices sınırının arkasında (motor/domain bilmez); çağrı doğrudan tarayıcıdan **kullanıcının kendi anahtarıyla** yapılır (sunucu/proxy yok, "backend yok" korunur). Üretilen şey ÖNERİDİR: aynı içe aktarma doğrulaması + önizleme + "Ekle" onayından geçer (A18). Ham yanıt metin kutusuna düşer, kullanıcı düzeltebilir.
+- Anahtar: `localStorage` (cihaz içi). IndexedDB'ye yazılmaz → **taşınabilir yedek anahtarı taşımaz**, geri yükleme/sıfırlama anahtara dokunmaz. Ekranda yalnız maskeli gösterilir. Uygulama anahtarsız tam çalışır; çevrimdışı yol değişmez.
+- Bilinçli kapsam dışı: OCR/ses (`05` §3.4 M4), otomatik atom eşleştirme/ilişki önerisi, uygulama içinde soru üretme (yalnız içe aktarma yolu), maliyet/kullanım göstergesi.
+- Durum: **KAPANDI**. Modüller: `src/platform/ai.ts`, `src/platform/web/ai.ts`, `src/app/aiSettings.ts`, `src/app/aiImport.ts`, `src/ui/dataAi.ts`; testler `tests/phase16-ai-ux.test.ts`.
+
+### BL-45 — Geri gezinme ve dokunma ergonomisi
+- Bölüm: `07` §1.1 (telefon ergonomisi), `14` §11, §13; `07` S1 alt eylemler.
+- Gözlem (2026-09-09): kullanıcı "bir yere gidince en üste çıkıp geri basmam gerekiyor; iOS kaydırma hareketi de çalışmalı" dedi; Bugün ekranındaki alt eylem satırı yedi düğmeyle taşıyordu.
+- Karar: ekran geçişleri tarayıcı geçmişine yazılır (`pushState`; aynı ekran içi durum değişimi `replaceState` ile geçmişi şişirmez) → iOS kenar kaydırma ve Android geri tuşu çalışır; `popstate` çalışma ekranından çıkışta oturumu bırakır (yarım cevap kaydedilmez, `07` §1.1). Ekran başlığı yapışkan, alt eylem çubuğu yatay kaydırmalı ve güvenli alan boşluklu.
+- Durum: **KAPANDI**. Testler: `tests/phase16-ai-ux.test.ts` ("geri" ve "çalışma ekranından geri").
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).
