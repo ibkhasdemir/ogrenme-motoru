@@ -1,6 +1,9 @@
 import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
+import type { Attempt } from '../src/domain'
+import { EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1 } from '../src/domain'
 import { canonicalJson } from '../src/engine/backup/canonical'
+import { rebuild, serializeMemory } from '../src/engine/rebuild/rebuild'
 import { DexieRepository } from '../src/store/dexie/dexieRepository'
 import { SchemaTooNewError } from '../src/store/repository'
 import { legacyFixture, readLegacyV1, seedLegacyV1, testIds, uniqueDbName } from './helpers/legacyDb'
@@ -40,6 +43,30 @@ describe('06 §6.2 — migration 1 → 2', () => {
       // U-QR-07 — current ile aynı sürüm exact kurulur; ek kayıt yok
       expect((await repo.listRevisions('q-1')).map((r) => r.version)).toEqual([1])
       expect((await repo.listRevisions('q-2')).map((r) => r.version)).toEqual([1, 2, 3])
+      // Phase 6 cümlesi: REBUILD migration öncesiyle eşit (ham olaylar değişmediği için A4 korunur)
+      const before = rebuild(fx.attempts as Attempt[], [], EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+      const after = rebuild(await repo.listAttempts(), await repo.listVoids(), EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+      expect(serializeMemory(after.memory)).toBe(serializeMemory(before.memory))
+      expect(after.memory.size).toBe(3)
+    } finally {
+      repo.close()
+    }
+  })
+
+  it('U-QR-10 — legacy eksik içerik hafızayı bozmaz: REBUILD migration öncesi ile eşit; Attempt sayısı aynı; primaryAtomIdAtAttempt değişmemiş', async () => {
+    const name = uniqueDbName('mig'); names.push(name)
+    const fx = legacyFixture()
+    await seedLegacyV1(name, fx)
+    const before = rebuild(fx.attempts as Attempt[], [], EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+    const repo = await open(name)
+    try {
+      const attempts = await repo.listAttempts()
+      expect(attempts).toHaveLength(fx.attempts.length)
+      expect(attempts.map((a) => a.primaryAtomIdAtAttempt)).toEqual((fx.attempts as Attempt[]).map((a) => a.primaryAtomIdAtAttempt))
+      const after = rebuild(attempts, await repo.listVoids(), EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+      expect(serializeMemory(after.memory)).toBe(serializeMemory(before.memory))
+      // content_unavailable_legacy revision'ları hafıza hesabına girmez; hafıza snapshot atomlarından kurulur (atm-c dâhil)
+      expect([...after.memory.keys()].sort()).toEqual(['atm-a', 'atm-b', 'atm-c'])
     } finally {
       repo.close()
     }
@@ -80,6 +107,12 @@ describe('06 §6.2 — migration 1 → 2', () => {
       expect((await repo.getQuestion('q-2'))!.createdAt).toBe('2026-09-01T09:00:00.000Z')
       expect((await repo.getQuestion('q-2'))!.updatedAt).toBe('2026-09-03T09:00:00.000Z') // kaynakta güvenilir updatedAt vardı
       expect((await repo.getQuestion('q-1'))!.updatedAt).toBeNull() // yoktu → null; createdAt kopyalanmaz (BL-13)
+      // Phase 6 cümlesi: REBUILD ve Attempt'lar değişmez
+      const fx = legacyFixture()
+      expect(canonicalJson(await repo.listAttempts())).toBe(canonicalJson(fx.attempts))
+      const before = rebuild(fx.attempts as Attempt[], [], EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+      const after = rebuild(await repo.listAttempts(), [], EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+      expect(serializeMemory(after.memory)).toBe(serializeMemory(before.memory))
     } finally {
       repo.close()
     }

@@ -1,8 +1,10 @@
 import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { Atom, CompleteQuestionRevision, QuestionAttemptInput, RecallAttemptInput, Subject, Topic } from '../src/domain'
+import { EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1 } from '../src/domain'
 import { canonicalJson, sortSnapshotArrays } from '../src/engine/backup/canonical'
 import { ContentRuleError } from '../src/engine/question/plan'
+import { rebuild, serializeMemory } from '../src/engine/rebuild/rebuild'
 import { DexieRepository } from '../src/store/dexie/dexieRepository'
 import { MemoryRepository, type RepositoryTestHooks } from '../src/store/memory/memoryRepository'
 import { AlreadyVoidedError, DuplicateAttemptError, DuplicateRevisionError, UnknownAttemptError, type Repository } from '../src/store/repository'
@@ -199,10 +201,15 @@ describe.each([
     await repo.createQuestion(qInput)
     await repo.appendAttempt(qAttempt('att-1'))
     await repo.appendAttempt(rAttempt('att-2'))
+    const before = rebuild(await repo.listAttempts(), await repo.listVoids(), EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
     const again = await h.reopen()
     expect((await again.listAttempts()).map((a) => a.sequence)).toEqual([1, 2])
     expect(await again.nextSequence()).toBe(3)
     expect((await again.getRevision('q-1', 1))!.text).toBe(qInput.text)
+    // Phase 6 cümlesi: REBUILD eşit
+    const after = rebuild(await again.listAttempts(), await again.listVoids(), EVIDENCE_POLICY_V1, SCHEDULER_CONFIG_V1)
+    expect(serializeMemory(after.memory)).toBe(serializeMemory(before.memory))
+    expect(after.memory.size).toBe(2)
   })
 
   it('I-15 — sayaç artışı ile olay yazımı aynı transaction: olay yazılamazsa sayaç geri alınır', async () => {
