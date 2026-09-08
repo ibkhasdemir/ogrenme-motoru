@@ -79,6 +79,8 @@ export function migrateBackup1to2(file: BackupFile, now: string): BackupFile {
     schemaVersion: 2,
     content: {
       ...file.content,
+      // BL-13: format-1 atomlarında prompt yok → "" (çalışılabilir değil; İçerik'te "soru yüzü eksik")
+      atoms: (file.content.atoms ?? []).map((a) => (typeof (a as { prompt?: unknown }).prompt === 'string' ? a : { ...a, prompt: '' })),
       questions,
       questionRevisions: [...(file.content.questionRevisions ?? []), ...revisions],
       inbox: file.content.inbox ?? [],
