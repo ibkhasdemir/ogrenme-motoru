@@ -239,7 +239,7 @@ describe('Geri yükleme uçları', () => {
       const before = await canon(repo)
       // sayıyı koruyarak bir ham kaydı değiştir (mock: doğrudan tabloya)
       let corrupted = false
-      const d: RestoreDeps = { ...deps, hooks: { beforeVerify: async () => { if (corrupted) return; corrupted = true; const first = (await repo.listAttempts())[0]!; await repo.db.attempts.update(first.id, { responseTimeMs: first.responseTimeMs + 1 }) } } }
+      const d: RestoreDeps = { ...deps, hooks: { beforeVerify: async () => { if (corrupted) return; corrupted = true; const first = (await repo.listAttempts())[0]!; await repo.db.attempts.update(first.id, { responseTimeMs: (first.responseTimeMs ?? 0) + 1 }) } } }
       const prepared = await prepareRestore(d, { kind: 'file', text: JSON.stringify(file) })
       if (!prepared.ok) throw new Error(prepared.errors.join(' | '))
       const out = await commitRestore(d, prepared)

@@ -196,8 +196,12 @@ export function validateSnapshotV2(file: BackupFile): ValidationReport {
     if (!isIso(a.timestamp) || !isStr(a.sessionId)) err(`Attempt timestamp/sessionId geçersiz: ${a.id}`)
     if (!atoms.has(a.primaryAtomIdAtAttempt)) err(`Attempt.primaryAtomIdAtAttempt çözülmüyor: ${a.id}`)
     if (!inEnum(ATTEMPT_MODES, a.mode)) err(`Attempt.mode enum dışı: ${a.id}`)
-    if (!inEnum(OPERATIONS, a.operation) || !inEnum(SUPPORTS, a.support)) err(`Attempt operation/support enum dışı: ${a.id}`)
-    if (!isNonNegInt(a.responseTimeMs)) err(`Attempt.responseTimeMs negatif/tamsayı değil: ${a.id}`)
+    // 05 §5a F02: yalnız external (yakalama) Attempt'ında support ve responseTimeMs "uygulanamaz" (null); başka modda null kabul edilmez
+    const external = a.mode === 'external'
+    if (!inEnum(OPERATIONS, a.operation)) err(`Attempt.operation enum dışı: ${a.id}`)
+    if (!(external && a.support === null) && !inEnum(SUPPORTS, a.support)) err(`Attempt.support enum dışı: ${a.id}`)
+    if (!(external && a.responseTimeMs === null) && !isNonNegInt(a.responseTimeMs)) err(`Attempt.responseTimeMs negatif/tamsayı değil: ${a.id}`)
+    if (a.sourceInboxItemId !== undefined && !isStr(a.sourceInboxItemId)) err(`Attempt.sourceInboxItemId metin olmalı: ${a.id}`)
     if (a.kind === 'question') {
       const qa = a as QuestionAttempt
       if (!inEnum(CONFIDENCES, qa.confidence)) err(`QuestionAttempt.confidence geçersiz: ${a.id}`)

@@ -141,7 +141,11 @@ export interface Repository {
   /** "+ Gelişmiş": güncel sürüm için OptionAtom kümesini değiştirir; doğru seçenekte ilişki → InvalidContentError (B-27). */
   setOptionAtoms(questionId: string, items: OptionAtom[]): Promise<void>
   listAtomRelations(): Promise<AtomRelation[]>
+  /** 05 §3.3 adım 4 "Karıştırdım": confusable ilişkisi (içerik; olay değil). Aynı çift ikinci kez yazılmaz. */
+  putAtomRelation(r: AtomRelation): Promise<void>
   listInbox(): Promise<InboxItem[]>
+  /** 05 §3.2: InboxItem olay DEĞİLDİR — düzenlenebilir; silme yerine status 'discarded'. */
+  putInbox(item: InboxItem): Promise<void>
 
   // --- ham olaylar (06 §2: başka metot yok) ---
   /** sequence ASC */

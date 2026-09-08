@@ -10,6 +10,7 @@ import { renderData } from './data'
 import { currentReminder, reminderLine, type BackupSectionState, type BackupServices } from './dataBackup'
 import { hookTypeLabel } from './labels'
 import { renderContentImport, type ImportUiState } from './contentImport'
+import { emptyCaptureState, renderCapture, renderInbox, type CaptureUiState } from './capture'
 import { restoreDeps, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { emergencyRollback } from '../app/restore'
 import type { UpdateController } from '../pwa/register'
@@ -24,6 +25,8 @@ export type Screen =
   | { name: 'questionForm'; presetAtomId?: string }
   | { name: 'content'; view: ContentView }
   | { name: 'import' }
+  | { name: 'capture' }
+  | { name: 'inbox' }
   | { name: 'data' }
   | { name: 'lockdown'; reason: string; jobId: string | null }
 
@@ -76,6 +79,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   let renderSeq = 0
   const backupState: BackupSectionState = { pendingConfirm: null, lastMessage: null }
   const importState: ImportUiState = { text: '', notes: '', unit: '', plan: null, error: null, busy: false }
+  const captureState: CaptureUiState = emptyCaptureState()
 
   const ctx: AppContext = {
     motor,
@@ -230,6 +234,8 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       case 'questionForm': return renderQuestionForm(ctx, screen.presetAtomId)
       case 'content': return renderContent(ctx, screen.view)
       case 'import': return renderContentImport(ctx, deps.services, importState)
+      case 'capture': return renderCapture(ctx, captureState)
+      case 'inbox': return renderInbox(ctx, captureState)
       case 'data': return renderData(ctx, { services: deps.services, backupState, restoreState })
       case 'lockdown': return renderLockdown(screen)
     }
@@ -264,6 +270,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     const n = summary.queue.length
     const todayIso = motor.clock.now()
     const reminder = deps.services ? reminderLine(await currentReminder(ctx)) : null
+    const pending = (await motor.listInbox()).filter((i) => i.status === 'pending').length // 05 §3: bekleyen yakalamalar
     const el = h('div', { class: 'screen', 'data-screen': 'today' },
       h('div', {},
         h('h1', { class: 'text-title' }, 'Bugün'),
@@ -292,6 +299,10 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
         : h('div', { class: 'card' }, renderText(hasAtoms ? 'Şu an vadesi gelen bir şey yok. Motor zamanı geldiğinde getirir.' : 'Henüz atom yok', 'text-body')),
       h('div', { class: 'screen-bottom' },
         h('div', { class: 'row' },
+          button('+ Yakala', () => void ctx.navigate({ name: 'capture' }), { class: 'btn-inline', testid: 'to-capture' }),
+          pending > 0
+            ? button(`Kutu · ${pending}`, () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox' })
+            : button('Kutu', () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox' }),
           button('+ Atom', () => void ctx.navigate({ name: 'atomForm' }), { class: 'btn-inline' }),
           button('+ Soru', () => void ctx.navigate({ name: 'questionForm' }), { class: 'btn-inline' }),
           button('İçerik', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline' }),

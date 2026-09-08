@@ -68,6 +68,10 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | Y-09 | Ders notu kutusu | nota yapıştırıp "Şablonu paylaş" → sohbete şablon + not tek parça gider | ☐ | |
 | Y-11 | Konular → Tümünü seç | tek dokunuşla hepsi işaretlenir; ünite yazıp taşıyınca liste tek ünite grubu olur | ☐ | |
 | Y-12 | Ünite alanı + Şablonu paylaş | şablonda "konu tam olarak <ünite> olacak" kuralı görünür; dönen JSON tek ünite ile gelir | ☐ | |
+| Y-13 | + Yakala | metin + köken ile kutuya atılır; Bugün'de "Kutu · N" görünür; vadeler değişmez | ☐ | |
+| Y-14 | Kutu → İşle (yeni atom) | neden sorusu ÇIKMAZ; kaydet → "ölçüm yazılmadı" | ☐ | |
+| Y-15 | Kutu → İşle (çalışılmış atom) | "Bu neden geldi?" çıkar; Hatırlayamadım → atom öne gelir (Bugün'de tekrar sayısı artar) | ☐ | |
+| Y-16 | "Yanlış yaptım" + "Emin miydim: Evet" | kaydedilir; İçerik → atomda köken görünür | ☐ | |
 | Y-10 | Atom ekranı → Çengel ekle | kendi kodlaman kaydedilir, kartta "Çengeli göster" ile çıkar; aynı metin ikinci kez "zaten var" | ☐ | |
 
 ## 4. Notlar

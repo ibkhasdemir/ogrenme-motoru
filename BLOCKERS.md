@@ -91,6 +91,14 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Karar: dosya akışı spec'teki gibi kalır. Yapılan: açılışta `navigator.storage.persist()` (kalıcı depo isteği); Veri ekranı notu ve README, otomatik cihaz içi kopyaların varlığını ve dış dosyanın haftalık sigorta olduğunu açıkça söyler. Hatırlatma eşiği (`06` §10: 7 gün / 250 olay) değişmedi.
 - Durum: **KAPANDI** (sınır platformdan). Bulut yedek ileride ayrı karar.
 
+### BL-41 — Öğrenme Kutusu (yakalama) v0'a eklendi (spec: M2)
+- Bölüm: `05_LEARNING_CAPTURE.md` (tam tasarım), `01` §3.1 (InboxItem), `01` §4.1 (`mode: external`), `10` §1 ("Yakalama · Öğrenme Kutusu ekranı, + Yakala → M2"), `06` §9.
+- Gözlem (2026-09-09): sahibi sıradaki iş olarak yakalamayı seçti. `05` zaten tam tasarlanmış; v0'da yalnız ekran yoktu (`05` §6: "v0'da hazır olanlar: AttemptMode.external, Provenance, InboxItem").
+- Karar (sahibi): **eklendi** — Phase 14. Uygulanan kapsam `05` §2, §3.1–3.3, §5, §5a F01–F02: yakalama ölçüm değildir; Attempt yalnız başarısızlık anında hafıza durumu olan atomda ve gerçek başarısızlıkta (`forgot`/`wrong`/`confused`) doğar; `timestamp` = yakalama anı; `support`/`responseTimeMs` = null (F02, `01` §4.1 alan notu olarak uygulandı); `sourceInboxItemId` + kutu öğesinden türetilen id ile tekrar-güvenlik; "Karıştırdım" onaylı `confusable` ilişkisi; köken atoma yazılır.
+- Bilinçli kapsam dışı (sonraki tur): fotoğraf/ses yakalama (F03 — medya biçimi tasarlanmadan açılmaz), LLM'li akıllı işleme (`05` §3.4 = M4), pekiştirme demeti / mini onarım / tekrarlayan başarısızlık sayacı (`05` §4, ileride), işleme sırasında soru oluşturma (`05` §3.3 adım 2 — şimdilik atom bağlanır, soru mevcut "+ Soru" ekranından eklenir), çalışma ekranlarında "+ Yakala" (ölçüm akışını bölmemek için yalnız Bugün ve Kutu'da).
+- Şema/yedek etkisi: yok. `inbox` tablosu ve `Provenance` zaten şema 2'de; yedek formatı 2 aynı. Yalnız doğrulama, external Attempt'ta iki null alanı kabul edecek şekilde genişletildi (başka modda null hâlâ hata).
+- Durum: **KAPANDI** (sahibi kararı 2026-09-09). Modüller: `src/engine/capture/capture.ts`, `Motor.captureInbox/editInbox/discardInbox/askReasonFor/processInbox`, `src/ui/capture.ts`; testler `tests/phase14-capture.test.ts`, `tests/phase14b-capture-ui.test.ts`.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

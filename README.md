@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 277 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 291 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -52,6 +52,20 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 - **Tüm veriyi sıfırla**: iki onay; öncesinde kurtarma noktası.
 - Eski sürümle alınmış yedekler (format 1) okunur ve bellekte güncel formata çevrilir; eski soru sürümlerinin metni yoksa "eski veri modelinde saklanmadığı için mevcut değil" olarak işaretlenir, uydurulmaz.
 - Farklı bir zamanlayıcı sürümüyle alınan yedek: ham geçmiş ve içerik olduğu gibi yüklenir, hafıza durumu kurulu motorla yeniden hesaplanır (uyarı gösterilir).
+
+## Öğrenme Kutusu (+ Yakala → Kutu)
+
+Çalışma dışında öğrenme olur: biri sorar, denemede garip bir soru çıkar, aklına bir şey takılır. Bunu kaydet, sonra işle (`docs/spec/05_LEARNING_CAPTURE.md`; BL-41).
+
+- **+ Yakala** (Bugün ekranı): ne olduğunu yaz, istersen kökenini seç (deneme, kitap, biri sordu, ders…) ve not düş. Şu an düzenlemek zorunda değilsin. **Yakalama bir ölçüm değildir:** hiçbir vade değişmez, hiçbir kayıt yazılmaz.
+- **Kutu**: bekleyenleri listeler. Bir öğeyi **İşle** dediğinde atomunu ararsın (yoksa önce + Atom ile eklersin), sonra:
+  - Atomun o an hafıza durumu **yoksa** hiçbir şey sorulmaz, ölçüm yazılmaz. İlk denemesini normal döngüde yapar; "henüz öğretilmemişti, bilemedi" diye sahte başarısızlık yazılmaz.
+  - Hafıza durumu **varsa** tek soru gelir: **Bu neden geldi?** Merak ettim (ölçüm yok) · Hatırlayamadım · Yanlış yaptım (+ "Bundan emin miydin?") · Karıştırdım (+ hangi atomla).
+  - Gerçek başarısızlıkta bir dış kayıt yazılır: `mode: external`, `selfAssessment: again`, zamanı **yakalama anı**. Dışarıda ölçülemeyen alanlar (süre, gösterilen destek) uydurulmaz, boş bırakılır.
+- Başarısızlık anında hafıza durumu yoksa, sen günler sonra işlesen bile ölçüm yazılmaz: kural olayın yaşandığı ana bakar.
+- Aynı kutu öğesi ikinci kez kayıt üretemez; kayıt kimliği o öğeden türetilir.
+- Köken bilgisi atoma işlenir: aylar sonra "bunu şu denemede yemiştim" izini korur.
+- Kutu öğeleri olay değildir: düzenlenebilir, atılabilir (silinmez, "atıldı" olur) ve hafızaya hiç dokunmaz.
 
 ## İçerik içe aktarma (İçerik → İçe aktar)
 

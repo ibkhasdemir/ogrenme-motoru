@@ -211,6 +211,12 @@ export class DexieRepository implements Repository {
   }
   listAtomRelations() { return this.db.atomRelations.toArray() }
   listInbox() { return this.db.inbox.toArray() }
+  async putInbox(item: InboxItem) { await this.db.inbox.put(item) }
+  async putAtomRelation(r: AtomRelation) {
+    const all = await this.db.atomRelations.toArray()
+    if (all.some((x) => x.fromAtomId === r.fromAtomId && x.toAtomId === r.toAtomId && x.type === r.type)) return
+    await this.db.atomRelations.add(r)
+  }
 
   // --- ham olaylar ---
   async listAttempts(): Promise<Attempt[]> {

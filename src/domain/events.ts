@@ -10,6 +10,8 @@ export interface AttemptBase {
   kind: AttemptKind
   /** yalnız geri al sonrası tekrar sunumdan doğan Attempt'ta: void edilen Attempt'ın id'si (03 §6.5). */
   replayOfAttemptId?: string
+  /** 05 §5a F02: yakalama akışından doğan Attempt'ın kaynağı; aynı kutu öğesi ikinci kez Attempt üretemez (tekrar-güvenli). */
+  sourceInboxItemId?: string
   sequence: number
   timestamp: string
   sessionId: string
@@ -18,8 +20,10 @@ export interface AttemptBase {
   mode: AttemptMode
   confidence: Confidence | null
   operation: Operation
-  support: Support
-  responseTimeMs: number
+  /** 05 §5a F02: external (yakalama) Attempt'ında dışarıda hangi desteğin gösterildiği bilinmez → null; enum genişletilmez, 'none' yazılmaz. */
+  support: Support | null
+  /** 05 §5a F02: external Attempt'ında gözlemlenemez → null ("uygulanamaz"); sıfır uydurulmaz. */
+  responseTimeMs: number | null
 }
 
 /** 01 §4.2 */

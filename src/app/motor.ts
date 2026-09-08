@@ -2,14 +2,15 @@
 // Yazma sırası: önce disk (raw), sonra bellek (derived) — 06 §5. Türetilmiş durum diske yazılmaz; açılışta REBUILD (06 §4).
 import type {
   Atom, AtomFacet, Attempt, AttemptVoid, CompleteQuestionRevision, Confidence, DailyQueueItem, EvidencePolicy, HookType,
-  LearningAction, MemoryHook, OptionAtomRelation, Question, QuestionAttempt, QuestionRevision, QueueConfig, RecallAttempt,
-  SchedulerConfig, SelfAssessment, Subject, Topic, WrongReason,
+  InboxItem, LearningAction, MemoryHook, OptionAtomRelation, Provenance, ProvenanceType, Question, QuestionAttempt,
+  QuestionRevision, QueueConfig, RecallAttempt, SchedulerConfig, SelfAssessment, Subject, Topic, WrongReason,
 } from '../domain'
 import { isCompleteRevision } from '../domain'
 import { AttemptBuildError, buildQuestionAttempt, buildRecallAttempt } from '../engine/attempts/build'
 import { compareCodePoint } from '../engine/backup/canonical'
 import type { ContentErrorRequest } from '../engine/question/contentError'
 import type { NewQuestionInput, QuestionPatch, ReviseOutcome } from '../engine/question/plan'
+import { buildExternalRecallAttempt, hadMemoryAt, reasonProducesAttempt, type CaptureReason } from '../engine/capture/capture'
 import { buildQueue, todayAttempts, todayCounts, validateQueueConfig, type QueueContext, type TodayCounts } from '../engine/queue/dailyQueue'
 import { applyAttempt, rebuild, type Memory } from '../engine/rebuild/rebuild'
 import { resolve } from '../engine/resolver/resolve'
@@ -115,6 +116,8 @@ export class Motor {
   private attempts: Attempt[] = []
   private voids: AttemptVoid[] = []
   private lastKnownSequence = 0
+  /** 01 §4.1: sessionId uygulama açılışında üretilir; yakalama akışı çalışma oturumundan bağımsızdır. */
+  private readonly captureSessionId: string
 
   private constructor(
     readonly repo: Repository,
@@ -122,7 +125,9 @@ export class Motor {
     readonly ids: IdGenerator,
     private readonly beforeWriteHook?: () => Promise<void>,
     private readonly recoverStorageHook?: () => Promise<void>,
-  ) {}
+  ) {
+    this.captureSessionId = ids.newId()
+  }
 
   static async create(deps: MotorDeps): Promise<Motor> {
     const m = new Motor(deps.repo, deps.clock, deps.ids, deps.beforeWrite, deps.recoverStorage)
@@ -373,6 +378,109 @@ export class Motor {
   }
 
   /** 07 S10: beş zorunlu alan; "+ Gelişmiş" isteğe bağlı. */
+  // --- Öğrenme Kutusu (05; BL-41) ---
+
+  /** 05 §3.1 — "+ Yakala": tek dokunuşta metin (+ isteğe bağlı köken). Ölçüm değildir; hiçbir projeksiyona girmez. */
+  async captureInbox(input: { rawText: string; provenanceType?: ProvenanceType; note?: string; context?: string }): Promise<InboxItem> {
+    await this.beforeWrite()
+    const rawText = input.rawText.trim()
+    if (!rawText) throw new MotorError('Yakalanan metin boş olamaz.')
+    const capturedAt = this.clock.now()
+    const provenance: Provenance | undefined = input.provenanceType
+      ? {
+        type: input.provenanceType,
+        date: capturedAt,
+        ...(input.note?.trim() ? { note: input.note.trim() } : {}),
+        ...(input.context?.trim() ? { context: input.context.trim() } : {}),
+      }
+      : undefined
+    const item: InboxItem = { id: this.ids.newId(), rawText, capturedAt, status: 'pending', ...(provenance ? { provenance } : {}) }
+    await this.repo.putInbox(item)
+    return item
+  }
+
+  listInbox(): Promise<InboxItem[]> { return this.repo.listInbox() }
+
+  /** 05 §3.2 — düzenlenebilir (yalnız pending); ham metin ve köken notu değişir, olay yazılmaz. */
+  async editInbox(id: string, rawText: string): Promise<InboxItem> {
+    await this.beforeWrite()
+    const item = (await this.repo.listInbox()).find((x) => x.id === id)
+    if (!item) throw new MotorError(`Kutu öğesi bulunamadı: ${id}`)
+    if (item.status !== 'pending') throw new MotorError('İşlenmiş öğe düzenlenemez.')
+    const text = rawText.trim()
+    if (!text) throw new MotorError('Yakalanan metin boş olamaz.')
+    const next: InboxItem = { ...item, rawText: text }
+    await this.repo.putInbox(next)
+    return next
+  }
+
+  /** 05 §3.2 — silme yerine 'discarded'; ham olay yazılmadığı için hafızaya etkisi yoktur. */
+  async discardInbox(id: string): Promise<void> {
+    await this.beforeWrite()
+    const item = (await this.repo.listInbox()).find((x) => x.id === id)
+    if (!item) throw new MotorError(`Kutu öğesi bulunamadı: ${id}`)
+    if (item.status === 'processed') throw new MotorError('İşlenmiş öğe atılamaz.')
+    await this.repo.putInbox({ ...item, status: 'discarded' })
+  }
+
+  /**
+   * 05 §5a F01 — "Bu neden geldi?" sorusu YALNIZ, başarısızlık anında (capturedAt) hafıza durumu olan atomda sorulur.
+   * İşleme anındaki duruma bakılmaz.
+   */
+  askReasonFor(atomId: string, capturedAt: string): boolean {
+    return hadMemoryAt(atomId, capturedAt, this.attempts, this.voids)
+  }
+
+  /**
+   * 05 §3.3 — İşleme: kutu öğesi bir atoma bağlanır; köken atoma yazılır; hafıza durumu varsa neden sorulur.
+   * Attempt yalnız gerçek başarısızlıkta (forgot/wrong/confused) ve yalnız F01 koşulu sağlanıyorsa yazılır.
+   * Sıra: içerik → Attempt → status (çökmede aynı öğe ikinci Attempt üretmez; id kutu öğesinden türetilir).
+   */
+  async processInbox(input: {
+    itemId: string
+    atomId: string
+    reason?: CaptureReason
+    sureAtFailure?: boolean
+    /** "Karıştırdım": kullanıcının onayladığı karıştırılan atom (confusable ilişkisi) */
+    confusedWithAtomId?: string
+  }): Promise<{ item: InboxItem; attempt: RecallAttempt | null; relationAdded: boolean }> {
+    await this.beforeWrite()
+    const item = (await this.repo.listInbox()).find((x) => x.id === input.itemId)
+    if (!item) throw new MotorError(`Kutu öğesi bulunamadı: ${input.itemId}`)
+    if (item.status !== 'pending') throw new MotorError('Bu öğe zaten işlenmiş.')
+    const c = await this.content()
+    const atom = c.atoms.find((a) => a.id === input.atomId)
+    if (!atom) throw new MotorError(`Atom bulunamadı: ${input.atomId}`)
+
+    // köken atoma eklenir (05 §5): aynı köken iki kez yazılmaz
+    if (item.provenance) {
+      const list = atom.provenance ?? []
+      const already = list.some((p) => p.type === item.provenance!.type && p.date === item.provenance!.date && (p.note ?? '') === (item.provenance!.note ?? ''))
+      if (!already) await this.repo.putAtom({ ...atom, provenance: [...list, item.provenance] })
+    }
+
+    let relationAdded = false
+    if (input.confusedWithAtomId && input.confusedWithAtomId !== atom.id) {
+      if (!c.atoms.some((a) => a.id === input.confusedWithAtomId)) throw new MotorError(`Atom bulunamadı: ${input.confusedWithAtomId}`)
+      await this.repo.putAtomRelation({ fromAtomId: atom.id, toAtomId: input.confusedWithAtomId, type: 'confusable' })
+      relationAdded = true
+    }
+
+    let attempt: RecallAttempt | null = null
+    const eligible = this.askReasonFor(atom.id, item.capturedAt) // F01: başarısızlık anındaki hafıza durumu
+    if (input.reason && reasonProducesAttempt(input.reason) && eligible) {
+      const built = buildExternalRecallAttempt({ item, atomId: atom.id, reason: input.reason, ...(input.sureAtFailure === undefined ? {} : { sureAtFailure: input.sureAtFailure }), sessionId: this.captureSessionId })
+      attempt = (await this.repo.appendAttempt(built)) as RecallAttempt
+      this.commitAttempt(attempt)
+      // yakalama anı geçmişte olabilir → sıra bozulmasın diye tam REBUILD (02 §5.3 monoton kırpma zaten rebuild'de)
+      await this.refresh()
+    }
+
+    const next: InboxItem = { ...item, status: 'processed' }
+    await this.repo.putInbox(next)
+    return { item: next, attempt, relationAdded }
+  }
+
   /**
    * Konu adını değiştirir (BL-39: "Ünite › Alt başlık"). Aynı derste aynı adlı konu varsa BİRLEŞTİRİR: atomlar hedefe taşınır,
    * kaynak konu boş kalır (silinmez; içerik listesi atom üzerinden çalıştığı için görünmez). Attempt'ler atoma bağlıdır,
