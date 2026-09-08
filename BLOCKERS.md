@@ -10,9 +10,9 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 
 | Durum | Sayı |
 |---|---|
-| Karar bekliyor (§1) | 10 (+ §3 faz planı onayı — onaylandı 2026-09-08, varsayılanlarla) |
-| Çözüldü (§2) | 23 |
-| Kapandı (§4) | 1 |
+| Karar bekliyor (§1) | 10 — kullanıcı 2026-09-08'de "varsayılanla ilerle" dedi; hepsi varsayılanla UYGULANDI, spec sahibi isterse değiştirir |
+| Çözüldü (§2) | 24 |
+| Kapandı (§4) | 2 |
 
 ## 1. Karar bekleyen maddeler
 
@@ -20,57 +20,57 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Bölüm: `01` §4.1 (`id` actionId'den türetilir, aynı id reddedilir) ↔ `01` §4.6 / `03` §6.5 ("EXACT LearningAction bir kez yeniden sunulur") ↔ `08` I-05, I-20, U-UN-06, U-UN-07.
 - Gözlem: aynı `actionId` ile yeniden sunum, tekrar cevabın Attempt id'sini void edilen Attempt'la çakıştırır; depo reddeder, U-UN-07 hiç geçemez. Yeni `actionId` üretilirse "her LearningAction için bir kez" kuralının tekrar cevaba uygulanıp uygulanmayacağı yazılı değil.
 - Varsayılan: tekrar sunumu **yeni `actionId`** taşır (kind/questionId/questionVersion aynı); tekrar Attempt'ı `replayOfAttemptId` ile bağlanır; tekrar cevaba **undoToken verilmez** (aynı mantıksal action için "bir kez" tüketilmiştir; S5/S7'de Geri al görünmez).
-- Durum: **KARAR BEKLİYOR.**
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (kullanıcı onayı 2026-09-08: "varsayılanla ilerle").
 
 ### BL-05 — `00` §3 "ölçüm kaydı her zaman doğru cevabın gösteriminden önce yazılır" ↔ hatırlama kartı
 - Bölüm: `00` §3 ↔ `07` §3 ("Kart: öz değerlendirme dokunuşunda; cevap zaten açılmıştır"), `07` S7, `03` §4.4, `01` §4.1 `responseTimeMs`.
 - Gözlem: kartta öz değerlendirme tanım gereği cevap açıldıktan sonra verilir; `00`'daki "her zaman" harfiyen sağlanamaz. `00` FROZEN ve çelişkide kazanır; `00` §5 uygulanamaz maddeyi buraya yönlendirir.
 - Varsayılan: soru yolunda `00` §3 harfiyen (Attempt S5'ten önce diske); kartta `07`/`03`/`01`'in ortak tasarımı (hatırlama ölçümü "Cevabı aç" anında biter, Attempt öz değerlendirmede yazılır).
-- Durum: **KARAR BEKLİYOR** (spec sahibi `00` §3'ü "soru yolunda" diye daraltabilir).
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı; spec sahibi `00` §3'ü "soru yolunda" diye daraltabilir.
 
 ### BL-06 — Bugün ekranı sayıları: `00` §3 "tekrar / yapılan / kalan" ↔ `03` §7 ve `07` S1 "tekrar / yeni / bugün yapılan"
 - Gözlem: "kalan" hiçbir dosyada tanımlı değil; "yeni" `00`'da yok; U-DQ-14 "0 yeni" metnini bekler; `07` "üç sayı" der.
 - Varsayılan: `03` §7 / `07` S1 uygulanır (tekrar, yeni, bugün yapılan); "kalan" karşılığı `Başla · N öğe` tahminidir.
-- Durum: **KARAR BEKLİYOR.**
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (kullanıcı onayı 2026-09-08: "varsayılanla ilerle").
 
 ### BL-07 — Açılışta yarım kalmış geri yüklemenin yeniden doğrulanması için `dryRunMemory` / `normalizedSnapshot` kalıcı değil
 - Bölüm: `06` §8 adım 9, 14; §8.5 ("committed → adım 13–14 yeniden koşulur"); `08` B-33, M-09.
 - Gözlem: journal yalnız `{ jobId, kind, phase, targetSummary, prePointId, … }` taşır; uygulama commit sonrası kapanıp açılınca adım 14'ün karşılaştırma operandları bellekte yok.
 - Varsayılan: açılış doğrulaması = REBUILD hatasız + adım 7 değişmezleri + sayaç = max sequence; geçerse `verified`, geçmezse §8.6. Kanonik JSON ve `serializeMemory` karşılaştırması yalnız aynı oturumda yapılır. Ek kalıcı veri yazılmaz.
-- Durum: **KARAR BEKLİYOR** (alternatif: hedef paket journal'a payload olarak yazılır).
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (alternatif: hedef paket journal'a payload olarak yazılır).
 
 ### BL-08 — "Bilinmeyen `configVersion` → red" ↔ scheduler uyumsuz yedeği normalize yolu
 - Bölüm: `06` §7 (bilinmeyen alanlar), `08` B-30 ↔ `06` §8.4, `02` §4.1, `13` §6.4(a), `08` B-19.
 - Gözlem: `13` §6.4 her motor değişikliğinde `configVersion += 1` ister; daha yeni motorla alınan gerçek yedek zorunlu olarak kurulu uygulamanın "bilmediği" `configVersion` taşır ve B-30 okumasıyla normalize adımına ulaşamadan reddedilir; `02` §4.1'in "ham olaylar hiç kaybolmaz" vaadi bu yolda tutulamaz.
 - Varsayılan: "bilinmeyen configVersion" = eksik veya pozitif tamsayı olmayan değer → red; tamsayı her değer kabul edilir, `isCompatible` false ise `06` §8.4 normalize yolu uygulanır. B-30 bu tanımla yazılır.
-- Durum: **KARAR BEKLİYOR.**
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (kullanıcı onayı 2026-09-08: "varsayılanla ilerle").
 
 ### BL-09 — iOS standalone PWA'da Blob indirme çalışmıyor; paylaşım sayfası için Web Share gerekir, `ShareService` v0 dışı
 - Bölüm: `13` §4.5, `08` M-08 ("iPhone: paylaşım sayfasından iCloud Drive") ↔ `06` §11 (BackupFileService web: `showSaveFilePicker` yoksa Blob indirme; `ShareService` hayır, arayüz bile yazılmaz).
 - Gözlem: `showSaveFilePicker` iOS Safari ve Android Chrome'da yok; `<a download>` + Blob ana ekrana eklenmiş (standalone) iOS PWA'da sessizce başarısız olduğu raporlanmış (WebKit 275288 → Apple radar; iOS 18+/26'da düzeldiği doğrulanmadı). Paylaşım sayfası yalnız `navigator.share({ files })` ile açılır.
 - Varsayılan: `BackupFileService` **web gerçekleştirimi içinde** (ayrı ShareService arayüzü yok) sıra: `showSaveFilePicker` → `saved`; yoksa `navigator.canShare({ files })` → `navigator.share` → `initiated`; yoksa Blob indirme → `initiated`. M-08 standalone PWA'dan denenir.
-- Durum: **KARAR BEKLİYOR.**
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (kullanıcı onayı 2026-09-08: "varsayılanla ilerle").
 
 ### BL-10 — Legacy format 1 / schemaVersion 1 fiziksel yapısı tanımsız (Yol B)
 - Bölüm: `06` §6.2, §7 matrisi, §8 adım 2–3 ("format-1 yapısal kurallar"), §8.3; `08` I-17, B-16, B-35, B-37.
 - Gözlem: format 1 yalnız "mevcut gerçekleştirim"e göndermeyle tanımlı; Yol B'de o kod yok. Fixture'lar `06` §6.2/§8.3'ün saydığı alanlarla yazılacak: questions[] `{ id, version, text, options[], correctOptionId, primaryAtomId, source, createdAt, archived }`, attempts[] `questionVersion`li, üst alanlar `backupFormatVersion: 1`, `schemaVersion: 1`, `config`, `content`, `events`; checksum yok. **Elinizde eski uygulamadan gerçek bir format-1 yedek dosyası veya IndexedDB dökümü varsa fixture ona göre yazılır.**
-- Durum: **KARAR BEKLİYOR** (gerçek dosya var mı?).
+- Durum: **KARAR BEKLİYOR** — varsayılan fixture uygulandı; gerçek format-1 dosyası gelirse fixture ona uyarlanır.
 
 ### BL-11 — S7 "Son kartı geri al" çubuğunun yeri
 - Bölüm: `07` S7 ("bir sonraki öğeye geçmeden önce … ekran altında en fazla 30 sn çubuk"; S7'de Devam düğmesi yok) ↔ `07` §3 ("öz değerlendirme → Attempt → nextItem"), E-07 ("Hatırladım → sonraki"), `07` §1.1 (Cevapla / Geri al bitişik değil).
 - Varsayılan: öz değerlendirme sonrası `nextItem` hemen çağrılır; çubuk sonraki ekranın altında 30 sn kalır, birincil eylemle arasında boşluk bırakılır (bitişik değil).
-- Durum: **KARAR BEKLİYOR.**
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (kullanıcı onayı 2026-09-08: "varsayılanla ilerle").
 
 ### BL-36 — `maximumInterval = 365` pinli kütüphanede sert tavan değil (Good = 366 gün)
 - Bölüm: `02` §4 ("`maximumInterval = 365`: sınav ufku; bir yılı aşan aralık üretilmez"), `08` U-SC-10 ("due ≤ now + 365 gün") ↔ ts-fsrs 5.4.2 gerçeği.
 - Gözlem (2026-09-08, betikle ölçüldü): Review durumunda çok yüksek stability ile Hard aralığı 365'e kırpılır; kütüphane Good'u en az `Hard + 1` yaptığı için Good = **366** gün, Easy = 367 gün (Easy v0'da üretilmez). `maximum_interval: 364` verilirse Good = 365 olur.
 - Varsayılan: `02` §4 değeri (365) ve kütüphane çıktısı aynen korunur; uygulama aralığa gün eklemez/çıkarmaz (`02` §3.1a); U-SC-10 gerçek üst sınırı (`maximumInterval + 1`) belgeler. Pratik etki yok (stability 100.000 gerçekçi değil).
 - Alternatif: `maximumInterval: 364` (`configVersion += 1`, REBUILD; `02` §4 düzeltmesi gerekir).
-- Durum: **KARAR BEKLİYOR.**
+- Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (kullanıcı onayı 2026-09-08: "varsayılanla ilerle").
 
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
-- Durum: **KARAR BEKLİYOR** (Phase 1 öncesi).
+- Durum: **KAPANDI** (2026-09-08; bkz. §4).
 
 ## 2. Çözülen tutarsızlıklar (bilgi; karar gerekmez)
 
@@ -165,7 +165,12 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - `13` §7 build başına tam varlık listesi + `buildId` ister; Vite `build.manifest` index.html ve `public/` ikonlarını içermez, SW'ye görünmez.
 - Uygulanan (Phase 11): küçük yerel Vite eklentisi (`generateBundle`/`writeBundle`) bundle anahtarları + public varlıkları + `buildId`'yi `sw.js`'e enjekte eder; SW dosya adı sabit (`sw.js`). Ek paket yok. **ÇÖZÜLDÜ** (gerçekleştirim notu).
 
-## 3. Test–faz eşlemesi (Yol B) — onay bekliyor (BL-12)
+### BL-37 — Migration 1→2 pseudo-kodu QuestionAtom(primary) üretmez
+- Bölüm: `06` §6.2 (upgrade pseudo-kodu yalnız questions/attempts/revisions dokunur) ↔ `01` §2.7 ("her sorunun tam olarak bir primary kaydı vardır") ↔ `06` §8.2 ("QuestionAtom(primary) eksik veya farklı → red").
+- Gözlem (kodda yakalandı, 2026-09-08): eski veride questionAtoms tablosu boşsa migrate edilmiş DB'den alınan yedek doğrulamada reddedilir.
+- Uygulanan: hem Dexie migration'ı hem `migrateBackup(1→2)` her soru için güncel `primaryAtomId`'den primary satırını garanti eder (mevcut satırlara dokunmaz). **ÇÖZÜLDÜ** (`01` §2.7 değişmezi).
+
+## 3. Test–faz eşlemesi (Yol B) — onaylandı ve uygulandı (BL-12)
 
 İlke: her test kimliğinin **tek sahip fazı** vardır ve orada tümüyle yeşillenir; bir testin bir cümlesi ileri faz modülü istiyorsa o cümle ileri fazda **aynı test dosyasına eklenir** (test gevşetilmez, mock ile yeşil ilan edilmez). Aşağıda yalnız `09`'dan sapmalar gerekçeli; sapma olmayan atamalar `09` ile aynıdır.
 
@@ -208,3 +213,6 @@ Faz başına nihai liste Phase 0 raporunda (kullanıcı onayı sonrası `BASELIN
 
 ### BL-03 — Node.js makinede kurulu değildi
 - winget `OpenJS.NodeJS.LTS` kullanıcı onayıyla kuruldu (v24.19.0, npm 11.17.0). **KAPANDI** (2026-09-08).
+
+### BL-12 — Test–faz eşlemesi
+- §3'teki eşleme kullanıcı onayıyla uygulandı; her test kimliği tek sahip fazında yeşillendi (Phase 1–11 commit mesajları). **KAPANDI** (2026-09-08).

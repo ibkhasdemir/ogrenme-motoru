@@ -56,3 +56,11 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 ## 4. Notlar
 - Bu liste `11` kural 4'e göre kod yazan tarafından yazılan dokümanlardandır; sonuçlar buraya işlenir, spec'e değil.
 - Yıkıcı yollar (geri yükleme, sıfırlama) telefonda denenmeden önce dış yedek alınır (`13` §2).
+
+## 5. Masaüstünde doğrulananlar (2026-09-08, gerçek Chrome, `npm run preview`)
+Telefon kontrolleri yerine geçmez; yalnız mekanizmanın çalıştığını gösterir.
+- SW kaydı ve aktivasyon; `motor-shell-<buildId>` önbelleğinde build'in 7 varlığının tamamı (index.html, assets/*.js, assets/*.css, manifest, 3 ikon).
+- Yeni build deploy → sayfa yenilenince eski build kendi önbelleğinden çalışmaya devam etti (manifest hâlâ eski); yeni SW tam ön-önbellekle `waiting`; Bugün'de "Yeni sürüm hazır · Yenile" (M-UP-01 mekanizması).
+- Yenile → yalnız o istemci bir kez yeniden yüklendi (sessionStorage oturumu korundu, döngü bayrağı temizlendi); yeni build aktif; eski `motor-shell-*` silindi, IndexedDB'ye dokunulmadı (M-UP-03/06 mekanizması).
+- Aynı kaynak → aynı buildId (deterministik); değişen varlık → yeni buildId (M-UP-07 mekanizması).
+- Not: Claude Code'un gömülü tarayıcı paneli service worker kaydını engelliyor ("unknown error fetching the script"); SW testleri gerçek tarayıcıda yapılmalı.

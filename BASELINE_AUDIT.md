@@ -96,3 +96,7 @@ Yol B'de bunlar **yalnız tasarım uyarısıdır**; hiçbiri mevcut kodda doğru
 
 - **Legacy şema (schemaVersion 1):** gerçek eski veritabanı yoktur. `06` §6.2'nin tarif ettiği şekil (questions tablosunda `version`, `text`, `options`, `correctOptionId`, `primaryAtomId`, `createdAt`; attempts'ta `questionVersion`) Dexie `version(1)` tanımı olarak yazılır; migration 1→2 yine gerçekleştirilir çünkü I-17, U-QR-07…12, B-16, B-26 bunu ister. Testler v1 veritabanını kendileri kurar (`11` kural 27).
 - **Test–faz bağımlılıkları:** Yol A'da mevcut olan modüller Yol B'de yoktur; `09`'un bazı test atamaları ileri faz modülü ister. Bunlar `BLOCKERS.md`'de listelenir ve faz planı onayında karara bağlanır (`09` "Test–faz bağımlılık kontrolü").
+
+## 8. Sonuç (2026-09-08)
+
+Phase -1 → 11 tamamlandı (her faz yeşil checkpoint ile). 236 otomatik test, `npm run build` yeşil, B-01 kırmızı çizgisi geçer. Telefon kontrolleri (`docs/PHONE_CHECK.md`) bekliyor; service worker yaşam döngüsü masaüstü Chrome'da doğrulandı. Açık kararlar ve uygulanan varsayılanlar `BLOCKERS.md` §1.
