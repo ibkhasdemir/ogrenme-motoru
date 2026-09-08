@@ -72,6 +72,15 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | Y-14 | Kutu → İşle (yeni atom) | neden sorusu ÇIKMAZ; kaydet → "ölçüm yazılmadı" | ☐ | |
 | Y-15 | Kutu → İşle (çalışılmış atom) | "Bu neden geldi?" çıkar; Hatırlayamadım → atom öne gelir (Bugün'de tekrar sayısı artar) | ☐ | |
 | Y-16 | "Yanlış yaptım" + "Emin miydim: Evet" | kaydedilir; İçerik → atomda köken görünür | ☐ | |
+| Y-17 | Çalışma akışı (BL-47) | "Okudum" sonrası soru HEMEN gelmez; araya başka atomlar girer, sonra ilk okunan sınanır. Tek atom varsa hemen sorulur | ☐ | |
+| Y-18 | Geri hareketi | ekranın kenarından sağa kaydırınca bir önceki ekrana döner; üstteki "←" kaydırırken kaybolmaz | ☐ | |
+| Y-19 | Kaydırıp arşivle | listede satırı sola kaydır → "Arşivle" çıkar; arşiv görünümünde kaydırınca geri gelir | ☐ | |
+| Y-20 | Kalıcı silme | hiç çalışılmamış, sorusuz atomda "Kalıcı sil" görünür; çalışılmış atomda yerine gerekçe yazar | ☐ | |
+| Y-21 | İlerleme ekranı | Bugün → İlerleme; "Emindim ama yanlıştı" ve "Zorlandıkların" doğru atomları listeler; ekran vadeleri değiştirmez | ☐ | |
+| Y-22 | Yapay zekâ ayarı | Veri → Yapay zekâ → anahtar kaydedilir; "Bağlantıyı dene" olumlu yanıt verir; anahtar maskeli görünür | ☐ | |
+| Y-23 | Yapay zekâ ile üret | İçe aktar → notu yapıştır → "Yapay zekâ ile üret" → önizleme gelir; Ekle demeden hiçbir şey eklenmez | ☐ | |
+| Y-24 | Yedek + yapay zekâ | yedek al → dosyada API anahtarı GEÇMEZ (dosyayı açıp arayarak doğrula) | ☐ | |
+| Y-25 | Yatay taşma | hiçbir ekran yana kaymaz (Bugün, İçerik, Veri, çalışma ekranları) | ☐ | |
 | Y-10 | Atom ekranı → Çengel ekle | kendi kodlaman kaydedilir, kartta "Çengeli göster" ile çıkar; aynı metin ikinci kez "zaten var" | ☐ | |
 
 ## 4. Notlar
