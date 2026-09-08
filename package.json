@@ -17,6 +17,7 @@
     "ts-fsrs": "5.4.2"
   },
   "devDependencies": {
+    "@types/node": "24.13.3",
     "fake-indexeddb": "6.2.5",
     "jsdom": "30.0.1",
     "typescript": "5.9.3",
