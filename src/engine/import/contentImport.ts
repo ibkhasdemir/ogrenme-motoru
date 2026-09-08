@@ -11,6 +11,23 @@ export const MAX_OPTIONS = 5
 /** Konu adı içinde alt başlık ayracı: "18. yy Osmanlı › Islahatlar" (veri modeli 2 seviye; 3. seviye ad içinde taşınır, BL-39) */
 export const TOPIC_SEPARATOR = ' › '
 
+/** "18. yy Osmanlı › Islahatlar" → { unit: "18. yy Osmanlı", sub: "Islahatlar" }; ayraçsız adda sub null. */
+export function splitTopicPath(name: string): { unit: string; sub: string | null } {
+  const i = name.indexOf(TOPIC_SEPARATOR)
+  if (i < 0) return { unit: name.trim(), sub: null }
+  const sub = name.slice(i + TOPIC_SEPARATOR.length).trim()
+  return { unit: name.slice(0, i).trim(), sub: sub || null }
+}
+
+/** Ünite altına taşıma: mevcut ünite varsa değiştirilir, yoksa ad alt başlık olur. Boş ünite adı → ad olduğu gibi. */
+export function joinTopicPath(unit: string, name: string): string {
+  const u = unit.trim()
+  const { unit: oldUnit, sub } = splitTopicPath(name)
+  const leaf = sub ?? oldUnit
+  if (!u) return leaf
+  return `${u}${TOPIC_SEPARATOR}${leaf}`
+}
+
 export interface ImportAtom {
   subjectName: string
   topicName: string
@@ -359,6 +376,24 @@ export function planContentImport(parsed: ParsedContent, existing: ExistingConte
   }
 
   return { atoms, questions, hooks, skippedAtoms, skippedQuestions, skippedHooks, errors }
+}
+
+/**
+ * "Tümünü şu ünitenin altına koy" (telefon bulgusu 2026-09-08: yapay zekâ üniteyi atlayıp her olayı ayrı `konu` yaptı → 37 konu).
+ * Yalnız eklenecek atomların konu adını değiştirir; mevcut içerik ve eşleşme (atom metniyle) etkilenmez.
+ */
+export function applyUnitToPlan(plan: ImportPlan, unit: string): ImportPlan {
+  const u = unit.trim()
+  if (!u) return plan
+  return { ...plan, atoms: plan.atoms.map((a) => ({ ...a, topicName: joinTopicPath(u, a.topicName) })) }
+}
+
+/** Ünite uyarısı (engellemez): konu başına ortalama atom azsa dizin parçalanmış demektir. */
+export function unitWarning(plan: ImportPlan): string | null {
+  if (plan.atoms.length < 8) return null
+  const topics = new Set(plan.atoms.map((a) => normText(a.topicName)))
+  if (topics.size < 6 || plan.atoms.length / topics.size >= 3) return null
+  return `${plan.atoms.length} atom ${topics.size} ayrı konuya dağılmış. Bunlar tek bir ünitenin alt başlıklarıysa yukarıya ünite adını yaz (örn. "18. yy Osmanlı"); liste o zaman ünite altında toplanır.`
 }
 
 /** Ekranda özet cümlesi (tek yerde üretilir; test edilir). Yeni atomların kendi çengelleri atom sayısına dâhildir. */

@@ -119,11 +119,12 @@ describe('İçerik listesi — Ders › Konu grupları; Panodan yapıştır', ()
       await click(byTestId('paste-import')!)
       expect(byTestId('import-summary')!.textContent).toBe('3 atom, 0 soru eklenecek')
       await click(byTestId('apply-import')!)
+      // BL-39: gruplama ünite düzeyinde; alt başlıklar grubun içinde etiketlenir
       const groups = [...document.querySelectorAll<HTMLDetailsElement>('details[data-group]')]
-      expect(groups).toHaveLength(2)
-      expect(groups.every((g) => !g.open)).toBe(true)
-      expect(groups[0]!.querySelector('summary')!.textContent).toBe('Tarih › 18. yy Osmanlı › Islahatlar2 atom · 0 soru')
-      expect(document.body.textContent).toContain('3 atom · 2 konu')
+      expect(groups).toHaveLength(1)
+      expect(groups[0]!.querySelector('summary')!.textContent).toBe('Tarih › 18. yy Osmanlı3 atom · 0 soru')
+      expect([...groups[0]!.querySelectorAll('[data-sub]')].map((e) => e.textContent)).toEqual(['Islahatlar', 'Padişahlar'])
+      expect(document.body.textContent).toContain('3 atom · 1 ünite')
       const search = document.querySelector<HTMLInputElement>('input[type=search]')!
       search.value = 'B1'
       search.dispatchEvent(new Event('input'))

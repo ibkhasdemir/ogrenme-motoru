@@ -373,6 +373,30 @@ export class Motor {
   }
 
   /** 07 S10: beş zorunlu alan; "+ Gelişmiş" isteğe bağlı. */
+  /**
+   * Konu adını değiştirir (BL-39: "Ünite › Alt başlık"). Aynı derste aynı adlı konu varsa BİRLEŞTİRİR: atomlar hedefe taşınır,
+   * kaynak konu boş kalır (silinmez; içerik listesi atom üzerinden çalıştığı için görünmez). Attempt'ler atoma bağlıdır,
+   * öğrenme geçmişi ve vadeler etkilenmez.
+   */
+  async renameTopic(topicId: string, newName: string): Promise<{ topicId: string; merged: boolean; movedAtoms: number }> {
+    await this.beforeWrite()
+    const name = newName.trim()
+    if (!name) throw new MotorError('Konu adı boş olamaz.')
+    const c = await this.content()
+    const topic = c.topics.find((t) => t.id === topicId)
+    if (!topic) throw new MotorError(`Konu bulunamadı: ${topicId}`)
+    const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr')
+    const target = c.topics.find((t) => t.id !== topicId && t.subjectId === topic.subjectId && norm(t.name) === norm(name))
+    if (!target) {
+      if (topic.name === name) return { topicId, merged: false, movedAtoms: 0 }
+      await this.repo.putTopic({ ...topic, name })
+      return { topicId, merged: false, movedAtoms: 0 }
+    }
+    const moving = c.atoms.filter((a) => a.topicId === topicId)
+    for (const a of moving) await this.repo.putAtom({ ...a, topicId: target.id })
+    return { topicId: target.id, merged: true, movedAtoms: moving.length }
+  }
+
   /** Mevcut atoma çengel ekler (içe aktarma "cengeller" bölümü, BL-38). Aynı metinli çengel varsa yeniden eklenmez → false. */
   async addHook(atomId: string, hook: { type: HookType; content: string }): Promise<boolean> {
     await this.beforeWrite()

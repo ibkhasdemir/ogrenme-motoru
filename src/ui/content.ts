@@ -3,6 +3,7 @@
 import type { Atom, CompleteQuestionRevision, Question, QuestionRevision } from '../domain'
 import { isCompleteRevision } from '../domain'
 import { affectedAttemptsByKeyChange } from '../engine/question/contentError'
+import { joinTopicPath, splitTopicPath } from '../engine/import/contentImport'
 import type { AppContext } from './app'
 import { button, field, formatDateTimeTr, h, input, textarea } from './dom'
 import { hookTypeLabel } from './labels'
@@ -12,6 +13,7 @@ export type ContentView =
   | { kind: 'atom'; atomId: string }
   | { kind: 'question'; questionId: string; edit?: boolean }
   | { kind: 'history'; questionId: string }
+  | { kind: 'topics' }
 
 export const LEGACY_UNAVAILABLE_TEXT = 'Bu eski denemeye ait soru metni eski veri modelinde saklanmadığı için mevcut değil.'
 export const VERSION_DATE_UNKNOWN = 'sürüm tarihi bilinmiyor'
@@ -25,7 +27,76 @@ export async function renderContent(ctx: AppContext, view: ContentView): Promise
     case 'atom': return renderAtom(ctx, view.atomId)
     case 'question': return renderQuestion(ctx, view.questionId, view.edit ?? false)
     case 'history': return renderHistory(ctx, view.questionId)
+    case 'topics': return renderTopics(ctx)
   }
+}
+
+/**
+ * S11c Konuları düzenle (BL-39): mevcut konuları bir ünitenin altına taşı ya da yeniden adlandır/birleştir.
+ * Telefon bulgusu 2026-09-08: içe aktarmada yapay zekâ üniteyi atlayınca 115 atom 37 ayrı konuya dağıldı; yeniden içe aktarmadan düzeltilebilmeli.
+ */
+async function renderTopics(ctx: AppContext): Promise<HTMLElement> {
+  const c = await ctx.motor.content()
+  const rows = c.topics
+    .map((t) => ({ topic: t, subject: c.subjects.find((s) => s.id === t.subjectId), atoms: c.atoms.filter((a) => a.topicId === t.id && !a.archived).length }))
+    .filter((r) => r.atoms > 0)
+    .sort((a, b) => (a.subject?.name ?? '').localeCompare(b.subject?.name ?? '', 'tr') || a.topic.name.localeCompare(b.topic.name, 'tr'))
+  const selected = new Set<string>()
+  const unitIn = input({ placeholder: 'Ünite adı (örn. 18. yy Osmanlı)', 'aria-label': 'Ünite adı', autocomplete: 'off' })
+  const nameIn = input({ placeholder: 'Yeni ad', 'aria-label': 'Yeni konu adı', autocomplete: 'off' })
+  const moveBtn = button('Seçilenleri ünite altına taşı', () => void move(), { variant: 'primary', disabled: true, testid: 'move-topics' })
+  const renameBtn = button('Seçileni yeniden adlandır', () => void rename(), { disabled: true, testid: 'rename-topic' })
+  const count = h('span', { class: 'text-meta', 'data-testid': 'topic-selection' }, '0 konu seçili')
+  const sync = () => {
+    count.textContent = `${selected.size} konu seçili`
+    moveBtn.disabled = selected.size === 0
+    renameBtn.disabled = selected.size !== 1
+    if (selected.size === 1) {
+      const only = rows.find((r) => r.topic.id === [...selected][0])
+      if (only && !nameIn.value.trim()) nameIn.value = only.topic.name
+    }
+  }
+  const move = async () => {
+    const unit = unitIn.value.trim()
+    if (!unit || !selected.size) return
+    let merged = 0
+    for (const id of selected) {
+      const row = rows.find((r) => r.topic.id === id)
+      if (!row) continue
+      const out = await ctx.motor.renameTopic(id, joinTopicPath(unit, row.topic.name))
+      if (out.merged) merged++
+    }
+    ctx.notice(`${selected.size} konu "${unit}" ünitesinin altına taşındı${merged ? `; ${merged} tanesi aynı adlı konuyla birleşti` : ''}. Atomlar ve öğrenme geçmişi değişmedi.`, 'ok')
+    await ctx.navigate({ name: 'content', view: { kind: 'topics' } })
+  }
+  const rename = async () => {
+    const id = [...selected][0]
+    const name = nameIn.value.trim()
+    if (!id || !name) return
+    try {
+      const out = await ctx.motor.renameTopic(id, name)
+      ctx.notice(out.merged ? `Konular birleştirildi; ${out.movedAtoms} atom taşındı.` : 'Konu adı değiştirildi.', 'ok')
+      await ctx.navigate({ name: 'content', view: { kind: 'topics' } })
+    } catch (e) {
+      ctx.notice((e as Error).message, 'error')
+      await ctx.render()
+    }
+  }
+  const row = (r: (typeof rows)[number]) => {
+    const cb = input({ type: 'checkbox', 'aria-label': r.topic.name })
+    cb.addEventListener('change', () => { if (cb.checked) selected.add(r.topic.id); else selected.delete(r.topic.id); sync() })
+    return h('label', { class: 'topic-row', 'data-topic': r.topic.id }, cb,
+      h('span', { class: 'stack' },
+        h('span', { class: 'text-body' }, r.topic.name),
+        h('span', { class: 'text-meta' }, `${r.subject?.name ?? ''} · ${r.atoms} atom`),
+      ))
+  }
+  return h('div', { class: 'screen', 'data-screen': 'topics' },
+    h('div', { class: 'row' }, back(ctx), h('h1', { class: 'text-title' }, 'Konuları düzenle')),
+    h('p', { class: 'text-support' }, 'Konuları bir ünitenin altında toplayabilirsin: "Küçük Kaynarca" → "18. yy Osmanlı › Küçük Kaynarca". Aynı adlı konu varsa birleşir. Atomlar, sorular ve öğrenme geçmişi değişmez.'),
+    h('div', { class: 'card stack' }, field('Ünite', unitIn), moveBtn, field('Konu adı (tek seçimde)', nameIn), renameBtn, count),
+    rows.length ? h('div', { class: 'stack' }, ...rows.map(row)) : h('p', { class: 'text-support' }, 'Henüz konu yok.'),
+  )
 }
 
 function back(ctx: AppContext, view: ContentView = { kind: 'list' }): HTMLElement {
@@ -55,26 +126,38 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
       badge ? h('span', { class: 'badge' }, badge) : null,
     )
   }
-  // Ders › Konu grupları (dizin görünümü, BL-39): sıralı atom listesi konuya göre kesilir; arama açıkken gruplar açık gelir
-  const groups: { key: string; label: string; atoms: Atom[]; questions: number }[] = []
+  // Ders › Ünite grupları, içinde alt başlıklar (dizin görünümü, BL-39): konu adındaki " › " ayracı ünite/alt başlık ayrımıdır
+  const groups: { key: string; label: string; subs: { label: string | null; atoms: Atom[] }[]; count: number; questions: number }[] = []
   for (const a of rest) {
     const topic = c.topics.find((t) => t.id === a.topicId)
     const subject = topic ? c.subjects.find((s) => s.id === topic.subjectId) : undefined
-    let g = groups.find((x) => x.key === a.topicId)
-    if (!g) { g = { key: a.topicId, label: [subject?.name, topic?.name].filter(Boolean).join(' › ') || 'Konusuz', atoms: [], questions: 0 }; groups.push(g) }
-    g.atoms.push(a)
+    const { unit, sub } = splitTopicPath(topic?.name ?? '')
+    const key = `${topic?.subjectId ?? ''}\n${unit.toLocaleLowerCase('tr')}`
+    let g = groups.find((x) => x.key === key)
+    if (!g) { g = { key, label: [subject?.name, unit].filter(Boolean).join(' › ') || 'Konusuz', subs: [], count: 0, questions: 0 }; groups.push(g) }
+    let s = g.subs.find((x) => x.label === sub)
+    if (!s) { s = { label: sub, atoms: [] }; g.subs.push(s) }
+    s.atoms.push(a)
+    g.count++
     g.questions += c.questions.filter((x) => x.primaryAtomId === a.id && !x.archived).length
   }
   const openAll = !!q || groups.length === 1
   return h('div', { class: 'screen', 'data-screen': 'content' },
     h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik')),
-    h('div', { class: 'row' }, button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' }), h('span', { class: 'text-meta' }, `${rest.length + missingPrompt.length} atom · ${groups.length} konu`)),
+    h('div', { class: 'row' },
+      button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' }),
+      button('Konular', () => void ctx.navigate({ name: 'content', view: { kind: 'topics' } }), { class: 'btn-inline', testid: 'to-topics' }),
+      h('span', { class: 'text-meta' }, `${rest.length + missingPrompt.length} atom · ${groups.length} ünite`),
+    ),
     search,
     missingPrompt.length ? h('div', { class: 'stack' }, h('p', { class: 'text-support' }, 'Soru yüzü eksik olan atomlar çalışılmaz; tamamlayınca kuyruğa girer.'), missingPrompt.map((a) => row(a, 'soru yüzü eksik'))) : null,
     rest.length
       ? h('div', { class: 'stack' }, ...groups.map((g) => h('details', { class: 'group', open: openAll, 'data-group': g.key },
-        h('summary', { class: 'group-summary' }, h('span', { class: 'text-body' }, g.label), h('span', { class: 'text-meta' }, `${g.atoms.length} atom · ${g.questions} soru`)),
-        h('div', { class: 'stack group-body' }, ...g.atoms.map((a) => row(a, undefined, false))),
+        h('summary', { class: 'group-summary' }, h('span', { class: 'text-body' }, g.label), h('span', { class: 'text-meta' }, `${g.count} atom · ${g.questions} soru`)),
+        h('div', { class: 'stack group-body' }, ...g.subs.flatMap((s) => [
+          s.label ? h('p', { class: 'group-sub', 'data-sub': s.label }, s.label) : null,
+          ...s.atoms.map((a) => row(a, undefined, false)),
+        ])),
       )))
       : (!missingPrompt.length ? h('p', { class: 'text-support' }, 'Henüz atom yok.') : null),
   )
