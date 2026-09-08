@@ -191,8 +191,8 @@ details.group > .group-body { padding: 0 var(--space-2) var(--space-2); }
   position: sticky;
   top: 0;
   z-index: 2;
-  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-4));
-  padding: var(--space-2) var(--space-4);
+  margin: calc(-1 * var(--space-2)) 0;
+  padding: var(--space-2) 0;
   background: var(--color-background);
   border-bottom: 1px solid transparent;
   flex-wrap: nowrap;
@@ -207,11 +207,10 @@ details.group > .group-body { padding: 0 var(--space-2) var(--space-2); }
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
+  overscroll-behavior-x: contain; /* kaydırma sayfayı yana kaydırmasın */
   scrollbar-width: none;
   padding-bottom: var(--space-1);
-  margin: 0 calc(-1 * var(--space-4));
-  padding-inline: var(--space-4);
-  scroll-padding-inline: var(--space-4);
+  max-width: 100%;
 }
 .nav-bar::-webkit-scrollbar { display: none; }
 .nav-bar > .btn { flex: 0 0 auto; white-space: nowrap; }
@@ -230,3 +229,59 @@ details.group > .group-body { padding: 0 var(--space-2) var(--space-2); }
 .swipe-surface { position: relative; background: var(--color-background); transition: transform var(--motion-fast) var(--motion-easing); will-change: transform; }
 .swipe-surface > .list-item { background: var(--color-background); }
 @media (prefers-reduced-motion: reduce) { .swipe-surface { transition: none; } }
+
+/* ============================================================================
+   Görsel cila turu (14 §1 sıralaması korunur: öğrenilebilirlik > okunabilirlik > ergonomi > estetik > süs).
+   Yeni renk/kavram eklenmez; var olan token'larla hiyerarşi, ritim ve dokunma geri bildirimi güçlendirilir.
+   ========================================================================== */
+
+/* Başlık ritmi: ekran başlığı ile içerik arasında net boşluk; bölüm başlıkları küçük harf boşluğuyla ayrışır */
+.text-title { letter-spacing: -0.01em; }
+.text-section { letter-spacing: -0.005em; margin-top: 0; }
+.text-display { letter-spacing: -0.015em; }
+
+/* Kart: iki seviyeli yükseklik yerine ince kenar + yumuşak gölge; iç boşluk tek ritimde */
+.card { box-shadow: var(--elev-1); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-4) var(--space-5); }
+.card > .text-section:first-child { margin-bottom: var(--space-1); }
+
+/* Düğmeler: birincil eylem gerçekten öne çıkar; ikincil ve sessiz olan geri çekilir */
+.btn { border-radius: var(--radius-md); }
+.btn-primary { box-shadow: var(--elev-1); }
+.btn-primary:active { box-shadow: none; }
+.btn-inline { padding-inline: var(--space-4); }
+.btn-quiet:active { background: color-mix(in srgb, var(--color-text-primary) 8%, transparent); }
+.btn[disabled] { box-shadow: none; }
+
+/* Sayı kartları: rakam öne çıkar, etiket sakin kalır; üçü aynı yükseklikte durur */
+.counts { gap: var(--space-3); }
+.count { padding: var(--space-3) var(--space-2); border-radius: var(--radius-lg); box-shadow: var(--elev-1); display: flex; flex-direction: column; justify-content: center; gap: var(--space-1); }
+.count-n { font-size: var(--type-display); }
+.count-l { font-size: var(--type-micro); text-transform: lowercase; }
+
+/* Liste satırı: dokunulabilir olduğu görünsün (ok işareti) ve basınca geri bildirim versin */
+.list-item { padding: var(--space-3) var(--space-2); border-radius: var(--radius-sm); border-bottom: 1px solid var(--color-border); transition: background var(--motion-fast) var(--motion-easing); }
+.list-item::after { content: "›"; color: var(--color-text-secondary); font-size: var(--type-section); line-height: 1; flex: 0 0 auto; }
+.list-item:active { background: color-mix(in srgb, var(--color-text-primary) 6%, transparent); }
+.list-item.is-on { border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
+.list-item.is-on::after { content: "✓"; color: var(--color-accent); }
+.topic-row::after { content: none; }
+
+/* Form alanları: etiket–alan bağı sıkılaşır, yardım metni ayrışır, odak belirgin */
+.field { gap: var(--space-2); }
+.field-label { font-weight: var(--weight-medium); color: var(--color-text-primary); }
+.field-help { font-size: var(--type-meta); line-height: var(--lh-meta); margin-top: calc(-1 * var(--space-1)); }
+.input { border-radius: var(--radius-md); }
+.input:focus-visible { border-color: var(--color-accent); }
+textarea.input { min-height: 96px; line-height: var(--lh-body); }
+
+/* Bildirim: metin ile kenar çizgisi arasında nefes; uzun cümlede satır yüksekliği korunur */
+.notice { padding: var(--space-3); border-radius: var(--radius-md); line-height: var(--lh-body); }
+
+/* Çengel bloğu ve rozet: anlam taşıyan vurgu, süs değil */
+.badge { padding: 3px var(--space-2); font-weight: var(--weight-medium); }
+
+/* Boş durum: ekran boş kalmasın, ne yapılacağını söylesin */
+.text-support:only-child { padding: var(--space-2) 0; }
+
+/* Hiçbir ekran yatay kaymaz; taşma varsa kendi kabında kaydırılır (14 §12) */
+body { overflow-x: hidden; }

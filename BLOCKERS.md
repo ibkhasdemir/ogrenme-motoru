@@ -136,6 +136,12 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Alternatifler (değerlendirildi, seçilmedi): oturumu "önce hepsini oku, sonra hepsini çöz" diye ikiye bölmek (3 dk'lık mikro modu bozar, on atomu peş peşe okutur); ilk cevabı `pretest` sayıp ölçüme katmamak (bilgi çöpe gider).
 - Durum: **KAPANDI**. Testler: `tests/phase18-first-test-gap.test.ts`.
 
+### BL-48 — Görsel cila turu ve yatay taşma düzeltmesi
+- Bölüm: `14` §1 (öncelik sırası), §7 (token'lar), §11–§13 (ergonomi), `10` §1 ("görsel cila" satırı: kopya tema/süs animasyon yasak, ama modern mobil görünüm v0 kalitesinin parçası).
+- Gözlem (2026-09-09): kullanıcı "UX çok sade, kalas gibi duruyor" dedi. Ayrıca ölçümde Bugün ekranında **yatay taşma** bulundu: alt gezinme çubuğunun negatif kenar boşlukları sayfayı yana kaydırıyordu (`14` §12 ihlali).
+- Yapılan: yeni renk/kavram YOK; var olan token'larla hiyerarşi ve ritim — kart yarıçapı/gölgesi, sayı kartlarında rakam öne çıkması, liste satırında "›" dokunma işareti ve basılı geri bildirim, form etiketlerinin okunur ağırlığı, yardım metninin ayrışması, bildirim iç boşluğu. Taşma düzeltildi (negatif kenar yerine kendi kabında kaydırma + `body { overflow-x: hidden }`).
+- Durum: **KAPANDI** (bu tur). Daha ileri görsel çalışma spec `14` revizyonu ile yapılır.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).
