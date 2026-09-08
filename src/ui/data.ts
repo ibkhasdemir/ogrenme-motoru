@@ -1,10 +1,17 @@
-// 07 S12 Veri / Ayarlar — Phase 9: Motor bölümü (REBUILD, kuyruk tavanları, sürüm satırı, ileri tarihli kayıtlar).
-// Yedek al / Yedekten geri yükle / Kurtarma noktaları / Tüm veriyi sıfırla bölümleri Phase 10'da `dataExtras` ile eklenir (11 kural 31).
+// 07 S12 Veri / Ayarlar — dört bölüm: Yedek al (10a) · Yedekten geri yükle (10c) · Kurtarma noktaları (10c) · Motor (Phase 9).
+// Yıkıcı yollar (geri yükleme, sıfırlama) yalnız Phase 10c kancasıyla, kurtarma noktası çekirdeği yeşilken açılır (11 kural 31).
 import { SCHEMA_VERSION } from '../store/repository'
 import type { AppContext } from './app'
+import { currentReminder, renderBackupSection, type BackupSectionState, type BackupServices } from './dataBackup'
 import { button, field, formatDateTimeTr, h, input } from './dom'
 
-export async function renderData(ctx: AppContext, extras?: (ctx: AppContext) => Promise<HTMLElement[]>): Promise<HTMLElement> {
+export interface DataScreenDeps {
+  services?: BackupServices
+  backupState: BackupSectionState
+  extras?: (ctx: AppContext) => Promise<HTMLElement[]>
+}
+
+export async function renderData(ctx: AppContext, d: DataScreenDeps): Promise<HTMLElement> {
   const m = ctx.motor
   const cfg = m.schedulerConfig
   const skew = m.clockSkew()
@@ -19,9 +26,11 @@ export async function renderData(ctx: AppContext, extras?: (ctx: AppContext) => 
     }
     await ctx.render()
   }
-  const extraSections = extras ? await extras(ctx) : []
+  const backupSection = d.services ? renderBackupSection(ctx, d.services, d.backupState, await currentReminder(ctx)) : null
+  const extraSections = d.extras ? await d.extras(ctx) : []
   return h('div', { class: 'screen', 'data-screen': 'data' },
     h('div', { class: 'row' }, button('← Bugün', () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Veri')),
+    backupSection,
     ...extraSections,
     h('section', { class: 'card stack', 'data-section': 'motor' },
       h('h2', { class: 'text-section' }, 'Motor'),

@@ -23,10 +23,10 @@ export function legacyFixture(): LegacyFixture {
   const t0 = '2026-09-01T09:00:00.000Z'
   const atom = (id: string, sortOrder: number) => ({ id, topicId: 'top-1', text: `${id} metni`, facets: ['fact'], sortOrder, archived: false, createdAt: t0 })
   const opts = [{ id: 'o-1', text: '1839' }, { id: 'o-2', text: '1856' }, { id: 'o-3', text: '1876' }]
-  const qAttempt = (id: string, seq: number, questionId: string, questionVersion: number, atomId: string, correct: boolean) => ({
+  const qAttempt = (id: string, seq: number, questionId: string, questionVersion: number, atomId: string, correct: boolean, selected = correct ? (questionId === 'q-2' ? 'o-2' : 'o-1') : (questionId === 'q-2' ? 'o-1' : 'o-2')) => ({
     id, kind: 'question', sequence: seq, timestamp: `2026-09-0${seq}T10:00:00.000Z`, sessionId: 'ses-1', primaryAtomIdAtAttempt: atomId,
     mode: seq === 1 ? 'new' : 'review', confidence: 'sure', operation: 'discriminate', support: 'choices', responseTimeMs: 5000, wrongReason: null,
-    questionId, questionVersion, initialSelectedOptionId: 'o-1', selectedOptionId: 'o-1', changedAnswer: false, correct,
+    questionId, questionVersion, initialSelectedOptionId: selected, selectedOptionId: selected, changedAnswer: false, correct,
   })
   return {
     subjects: [{ id: 'sub-1', name: 'Tarih', sortOrder: 1 }],

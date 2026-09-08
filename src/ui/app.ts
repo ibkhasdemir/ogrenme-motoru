@@ -7,6 +7,7 @@ import { add, button, clear, h, renderText } from './dom'
 import { renderAtomForm, renderQuestionForm } from './forms'
 import { renderContent, type ContentView } from './content'
 import { renderData } from './data'
+import { currentReminder, reminderLine, type BackupSectionState, type BackupServices } from './dataBackup'
 
 export type Screen =
   | { name: 'today' }
@@ -22,7 +23,9 @@ export type Screen =
 export interface AppDeps {
   motor: Motor
   appVersion: string
-  /** 10c: yedek/geri yükleme bölümleri bu kancayla eklenir; Phase 9'da yalnız Motor bölümü */
+  /** yedek servisleri (HashService + BackupFileService); yoksa Veri ekranında yedek bölümü çıkmaz */
+  services?: BackupServices
+  /** 10c: geri yükleme / kurtarma noktaları / sıfırlama bölümleri bu kancayla eklenir */
   dataExtras?: (ctx: AppContext) => Promise<HTMLElement[]>
 }
 
@@ -58,6 +61,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   let undoTimer: ReturnType<typeof setTimeout> | null = null
   let noticeState: { text: string; kind: 'ok' | 'error' | 'info' } | null = null
   let renderSeq = 0
+  const backupState: BackupSectionState = { pendingConfirm: null, lastMessage: null }
 
   const ctx: AppContext = {
     motor,
@@ -149,7 +153,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       case 'atomForm': return renderAtomForm(ctx)
       case 'questionForm': return renderQuestionForm(ctx, screen.presetAtomId)
       case 'content': return renderContent(ctx, screen.view)
-      case 'data': return renderData(ctx, deps.dataExtras)
+      case 'data': return renderData(ctx, { services: deps.services, backupState, extras: deps.dataExtras })
     }
   }
 
@@ -160,6 +164,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     const hasAtoms = content.atoms.some((a) => !a.archived)
     const n = summary.queue.length
     const todayIso = motor.clock.now()
+    const reminder = deps.services ? reminderLine(await currentReminder(ctx)) : null
     const el = h('div', { class: 'screen', 'data-screen': 'today' },
       h('div', {},
         h('h1', { class: 'text-title' }, 'Bugün'),
@@ -172,6 +177,9 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       ),
       summary.skew.warning
         ? h('div', { class: 'notice', role: 'status' }, `Cihaz saati tutarsız görünüyor: ${summary.skew.futureDated.length} kayıt ileri tarihli · `, button('İncele', () => void ctx.navigate({ name: 'data' }), { variant: 'quiet', class: 'btn-inline' }))
+        : null,
+      reminder
+        ? h('div', { class: 'notice', role: 'status', 'data-testid': 'backup-reminder' }, `${reminder} · `, button('Yedek al', () => void ctx.navigate({ name: 'data' }), { variant: 'quiet', class: 'btn-inline' }))
         : null,
       n > 0
         ? h('div', { class: 'stack' },

@@ -1,7 +1,9 @@
 // PWA kabuğu giriş noktası: depo → migration → Motor (REBUILD) → arayüz. Çekirdek platformdan bağımsızdır; kablolama burada (A22).
 import './ui/styles.css'
 import { Motor } from './app/motor'
+import { WebBackupFileService } from './platform/web/backupFile'
 import { WebClock } from './platform/web/clock'
+import { WebCryptoHashService } from './platform/web/hash'
 import { WebIdGenerator } from './platform/web/ids'
 import { DexieRepository } from './store/dexie/dexieRepository'
 import { SchemaTooNewError } from './store/repository'
@@ -18,7 +20,7 @@ async function boot(): Promise<void> {
   try {
     const repo = await DexieRepository.open({ ids, now: () => clock.now() })
     const motor = await Motor.create({ repo, clock, ids })
-    const app = mountApp(root, { motor, appVersion: APP_VERSION })
+    const app = mountApp(root, { motor, appVersion: APP_VERSION, services: { files: new WebBackupFileService(), hash: new WebCryptoHashService() } })
     document.addEventListener('visibilitychange', () => {
       const visible = document.visibilityState === 'visible'
       app.setVisible(visible)
