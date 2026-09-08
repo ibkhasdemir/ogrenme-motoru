@@ -1,0 +1,203 @@
+# BLOCKERS.md — Spec çelişkileri, uygulanamazlıklar ve bekleyen kararlar
+
+Protokol: `11_CLAUDE_CODE_RULES.md` kural 5–6. Her madde: tarih · ilgili spec bölümü · gözlem · en küçük öneri · durum.
+Durumlar: **KARAR BEKLİYOR** (kullanıcı karar verir; belirtilen varsayılan uygulanır) · **ÇÖZÜLDÜ** (kural 2 — anayasa > küçük numaralı dosya — veya spec'in kendi içindeki daha özgül cümleyle; bilgi amaçlı, kullanıcı isterse spec'i günceller) · **KAPANDI**.
+Spec dosyaları düzenlenmez. Blocker işi durdurmaz; etkilenmeyen fazlarda devam edilir.
+
+Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 lens, 68 ham bulgu; her bulgu spec metniyle tek tek değerlendirildi). Tüm maddeler 2026-09-08 tarihli.
+
+## 0. Özet
+
+| Durum | Sayı |
+|---|---|
+| Karar bekliyor (§1) | 9 (+ §3 faz planı onayı) |
+| Çözüldü (§2) | 23 |
+| Kapandı (§4) | 1 |
+
+## 1. Karar bekleyen maddeler
+
+### BL-04 — Geri al tekrarında `actionId` ve tekrar cevabın geri alınabilirliği
+- Bölüm: `01` §4.1 (`id` actionId'den türetilir, aynı id reddedilir) ↔ `01` §4.6 / `03` §6.5 ("EXACT LearningAction bir kez yeniden sunulur") ↔ `08` I-05, I-20, U-UN-06, U-UN-07.
+- Gözlem: aynı `actionId` ile yeniden sunum, tekrar cevabın Attempt id'sini void edilen Attempt'la çakıştırır; depo reddeder, U-UN-07 hiç geçemez. Yeni `actionId` üretilirse "her LearningAction için bir kez" kuralının tekrar cevaba uygulanıp uygulanmayacağı yazılı değil.
+- Varsayılan: tekrar sunumu **yeni `actionId`** taşır (kind/questionId/questionVersion aynı); tekrar Attempt'ı `replayOfAttemptId` ile bağlanır; tekrar cevaba **undoToken verilmez** (aynı mantıksal action için "bir kez" tüketilmiştir; S5/S7'de Geri al görünmez).
+- Durum: **KARAR BEKLİYOR.**
+
+### BL-05 — `00` §3 "ölçüm kaydı her zaman doğru cevabın gösteriminden önce yazılır" ↔ hatırlama kartı
+- Bölüm: `00` §3 ↔ `07` §3 ("Kart: öz değerlendirme dokunuşunda; cevap zaten açılmıştır"), `07` S7, `03` §4.4, `01` §4.1 `responseTimeMs`.
+- Gözlem: kartta öz değerlendirme tanım gereği cevap açıldıktan sonra verilir; `00`'daki "her zaman" harfiyen sağlanamaz. `00` FROZEN ve çelişkide kazanır; `00` §5 uygulanamaz maddeyi buraya yönlendirir.
+- Varsayılan: soru yolunda `00` §3 harfiyen (Attempt S5'ten önce diske); kartta `07`/`03`/`01`'in ortak tasarımı (hatırlama ölçümü "Cevabı aç" anında biter, Attempt öz değerlendirmede yazılır).
+- Durum: **KARAR BEKLİYOR** (spec sahibi `00` §3'ü "soru yolunda" diye daraltabilir).
+
+### BL-06 — Bugün ekranı sayıları: `00` §3 "tekrar / yapılan / kalan" ↔ `03` §7 ve `07` S1 "tekrar / yeni / bugün yapılan"
+- Gözlem: "kalan" hiçbir dosyada tanımlı değil; "yeni" `00`'da yok; U-DQ-14 "0 yeni" metnini bekler; `07` "üç sayı" der.
+- Varsayılan: `03` §7 / `07` S1 uygulanır (tekrar, yeni, bugün yapılan); "kalan" karşılığı `Başla · N öğe` tahminidir.
+- Durum: **KARAR BEKLİYOR.**
+
+### BL-07 — Açılışta yarım kalmış geri yüklemenin yeniden doğrulanması için `dryRunMemory` / `normalizedSnapshot` kalıcı değil
+- Bölüm: `06` §8 adım 9, 14; §8.5 ("committed → adım 13–14 yeniden koşulur"); `08` B-33, M-09.
+- Gözlem: journal yalnız `{ jobId, kind, phase, targetSummary, prePointId, … }` taşır; uygulama commit sonrası kapanıp açılınca adım 14'ün karşılaştırma operandları bellekte yok.
+- Varsayılan: açılış doğrulaması = REBUILD hatasız + adım 7 değişmezleri + sayaç = max sequence; geçerse `verified`, geçmezse §8.6. Kanonik JSON ve `serializeMemory` karşılaştırması yalnız aynı oturumda yapılır. Ek kalıcı veri yazılmaz.
+- Durum: **KARAR BEKLİYOR** (alternatif: hedef paket journal'a payload olarak yazılır).
+
+### BL-08 — "Bilinmeyen `configVersion` → red" ↔ scheduler uyumsuz yedeği normalize yolu
+- Bölüm: `06` §7 (bilinmeyen alanlar), `08` B-30 ↔ `06` §8.4, `02` §4.1, `13` §6.4(a), `08` B-19.
+- Gözlem: `13` §6.4 her motor değişikliğinde `configVersion += 1` ister; daha yeni motorla alınan gerçek yedek zorunlu olarak kurulu uygulamanın "bilmediği" `configVersion` taşır ve B-30 okumasıyla normalize adımına ulaşamadan reddedilir; `02` §4.1'in "ham olaylar hiç kaybolmaz" vaadi bu yolda tutulamaz.
+- Varsayılan: "bilinmeyen configVersion" = eksik veya pozitif tamsayı olmayan değer → red; tamsayı her değer kabul edilir, `isCompatible` false ise `06` §8.4 normalize yolu uygulanır. B-30 bu tanımla yazılır.
+- Durum: **KARAR BEKLİYOR.**
+
+### BL-09 — iOS standalone PWA'da Blob indirme çalışmıyor; paylaşım sayfası için Web Share gerekir, `ShareService` v0 dışı
+- Bölüm: `13` §4.5, `08` M-08 ("iPhone: paylaşım sayfasından iCloud Drive") ↔ `06` §11 (BackupFileService web: `showSaveFilePicker` yoksa Blob indirme; `ShareService` hayır, arayüz bile yazılmaz).
+- Gözlem: `showSaveFilePicker` iOS Safari ve Android Chrome'da yok; `<a download>` + Blob ana ekrana eklenmiş (standalone) iOS PWA'da sessizce başarısız olduğu raporlanmış (WebKit 275288 → Apple radar; iOS 18+/26'da düzeldiği doğrulanmadı). Paylaşım sayfası yalnız `navigator.share({ files })` ile açılır.
+- Varsayılan: `BackupFileService` **web gerçekleştirimi içinde** (ayrı ShareService arayüzü yok) sıra: `showSaveFilePicker` → `saved`; yoksa `navigator.canShare({ files })` → `navigator.share` → `initiated`; yoksa Blob indirme → `initiated`. M-08 standalone PWA'dan denenir.
+- Durum: **KARAR BEKLİYOR.**
+
+### BL-10 — Legacy format 1 / schemaVersion 1 fiziksel yapısı tanımsız (Yol B)
+- Bölüm: `06` §6.2, §7 matrisi, §8 adım 2–3 ("format-1 yapısal kurallar"), §8.3; `08` I-17, B-16, B-35, B-37.
+- Gözlem: format 1 yalnız "mevcut gerçekleştirim"e göndermeyle tanımlı; Yol B'de o kod yok. Fixture'lar `06` §6.2/§8.3'ün saydığı alanlarla yazılacak: questions[] `{ id, version, text, options[], correctOptionId, primaryAtomId, source, createdAt, archived }`, attempts[] `questionVersion`li, üst alanlar `backupFormatVersion: 1`, `schemaVersion: 1`, `config`, `content`, `events`; checksum yok. **Elinizde eski uygulamadan gerçek bir format-1 yedek dosyası veya IndexedDB dökümü varsa fixture ona göre yazılır.**
+- Durum: **KARAR BEKLİYOR** (gerçek dosya var mı?).
+
+### BL-11 — S7 "Son kartı geri al" çubuğunun yeri
+- Bölüm: `07` S7 ("bir sonraki öğeye geçmeden önce … ekran altında en fazla 30 sn çubuk"; S7'de Devam düğmesi yok) ↔ `07` §3 ("öz değerlendirme → Attempt → nextItem"), E-07 ("Hatırladım → sonraki"), `07` §1.1 (Cevapla / Geri al bitişik değil).
+- Varsayılan: öz değerlendirme sonrası `nextItem` hemen çağrılır; çubuk sonraki ekranın altında 30 sn kalır, birincil eylemle arasında boşluk bırakılır (bitişik değil).
+- Durum: **KARAR BEKLİYOR.**
+
+### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
+- `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
+- Durum: **KARAR BEKLİYOR** (Phase 1 öncesi).
+
+## 2. Çözülen tutarsızlıklar (bilgi; karar gerekmez)
+
+### BL-01 — `content_unavailable_legacy` revision'ında `createdAt`
+- `06` §6.2 pseudo-kodu `createdAt: now` ve `createdAtSource`'suz `legacyProvenance` yazar; `01` §2.5 `createdAt: null` + `createdAtSource: "unknown"` ister; `06` §8.2 "createdAt dolu → red"; `00` v1.6 "legacy sürüm tarihi uydurulmaz". Aynı kural `06` §8.3 `migrateBackup(1→2)` için de geçerli (aksi hâlde B-16 doğrulamada düşer).
+- Uygulanan: `createdAt: null`, `legacyProvenance: { migratedAt, fromSchemaVersion: 1, createdAtSource: "unknown" }`. **ÇÖZÜLDÜ** (`01` > `06`; `06` §8.2 aynı yönde).
+
+### BL-02 — Geçmiş kayıtlarında `since` alanı ve `evidencePolicyHistory` kayıt türü
+- `06` §7 örnek JSON `{ policyVersion|configVersion, since }`; kural metni "her kaydın `kind`'ı var; `at` tek zaman anahtarı; `since` → `at`". Policy geçmişi için `kind` tanımlanmamış.
+- Uygulanan: `{ kind: "config_snapshot", at, configVersion, config }`, `{ kind: "scheduler_migration", at, from, to, reason }`; policy geçmişi de `{ kind: "config_snapshot", at, policyVersion, policy }` (yeni `kind` değeri uydurulmaz). **ÇÖZÜLDÜ** (kural metni > örnek).
+
+### BL-13 — `Question.updatedAt: null` ve `Atom.prompt: ""` ↔ "zorunlu alan eksikliği → red"
+- `01` §2.5 `updatedAt` zorunlu, `06` §6.2 migration'da null yazar; `01` §2.3 `prompt` zorunlu ama "boş olan atom yalnız eski veriden gelebilir"; `06` §8.2 zorunlu alan eksikliğini reddeder.
+- Uygulanan: tip `updatedAt: string | null` (null yalnız migration'dan), `prompt: string` (boş olabilir; UI "soru yüzü eksik", kuyruğa girmez). Doğrulayıcı bu iki hâli kabul eder; "eksik" = alan hiç yok. **ÇÖZÜLDÜ** (özgül izin cümleleri > genel kural).
+
+### BL-14 — `questionVersion` kaynağı
+- `01` §4.2 tablosu "cevap anındaki `Question.currentVersion`", `09` Phase 3 "`questionVersion = currentVersion`" ↔ `01` §4.2a, §6.4, `03` §4.3, I-09, U-RS-08 "sunum anındaki `action.questionVersion`".
+- Uygulanan: `action.questionVersion`. **ÇÖZÜLDÜ** (ayrıntılı akış ve testler > tablo hücresi).
+
+### BL-15 — `sequence`'ı kim atar
+- `06` §2 `appendAttempt(a)` + `nextSequence()`; `06` §3 sayaç ve olay aynı transaction; I-20 reddedilen çift kayıt sayaç tüketmez; B-01 `nextSequence()` salt gözlem.
+- Uygulanan: `appendAttempt/appendVoid` girdi olarak `sequence`'sız kayıt alır, kendi transaction'ında atar ve dondurulmuş kaydı döndürür; `nextSequence()` = `meta.sequence + 1` salt-okur bakış. **ÇÖZÜLDÜ.**
+
+### BL-16 — `meta` yedeğe girer mi
+- `06` §1 "meta … yedeğe girer" ↔ `06` §7 format/checksum kapsamında meta yok, "cihaz meta alanları taşınabilir formata girmez", §10 tablo.
+- Uygulanan: meta yedeğe girmez. **ÇÖZÜLDÜ** (`06` §7/§10 özgül).
+
+### BL-17 — S6'nın yeri
+- `07` §2 tablosu "S6 (S5'in içinde)" ↔ `07` §3/§4 ve E-19: S6 S5'ten ÖNCE, doğru seçenek ve açıklama gizli.
+- Uygulanan: S6 ayrı adım, S5'ten önce. **ÇÖZÜLDÜ.**
+
+### BL-18 — `lastExternalBackup* = null` iken Bugün satırı
+- `06` §10 tablosu / `07` S1 "Yedek durumu bilinmiyor · Yedek al" ↔ `06` §10 son madde (7 gün / 250 olay eşiği).
+- Uygulanan: null ise durum satırı hemen gösterilir (E-21); eşik aşılınca aynı satıra "· N yeni kayıt" eklenir (B-36); işaretçi varsa yalnız eşik kuralı. **ÇÖZÜLDÜ** (yorum).
+
+### BL-19 — v0'da semantik vurgu düzeyi
+- `07` §7 kritik bilgi vurgusu ister; `14` §5 v0'da metin düz kalır, span metadata'sı yok.
+- Uygulanan: v0'da roller blok düzeyinde (çengel bloğu `memory-hook`, kaynak etiketi `source`, `state-*`, uyarı blokları); kelime düzeyi vurgu yok; V-14/V-15 bu bloklar üzerinden. **ÇÖZÜLDÜ** (`14` §5 özgül v0 cümlesi).
+
+### BL-20 — S3 kırıntısı "i/N"
+- `03` rev. 2 oturum snapshot'ını kaldırdı; N tanımsız.
+- Uygulanan: `i = answered + 1`, `N = answered + buildQueue(now).length` (tahmin, her öğede yeniden hesaplanır). **ÇÖZÜLDÜ** (yorum).
+
+### BL-21 — Kuyruk sıralama anahtarı
+- `03` §3.3 pseudo-kod ve §3.4 kural 6, U-DQ-02, U-SC-15: `(R ASC, due ASC, atomId ASC)` ↔ `03` §3.5, §8 son satır, U-DS-11: "(R, atomId)".
+- Uygulanan: `(R ASC, due ASC, atomId ASC)`; "(R, atomId)" kısaltma sayılır. **ÇÖZÜLDÜ** (pseudo-kod + numaralı kural > düzyazı özet).
+
+### BL-22 — U-RB-10 "sahte policyVersion 2" ↔ "bilinmeyen policyVersion → hata"
+- Uygulanan: `rebuild`/`applyAttempt` enjekte edilebilir `ratingFor` alır; üretim `ratingFor` v≠1'de hata fırlatır (U-EP-09); U-RB-10 sahte politikayı test enjeksiyonuyla verir. **ÇÖZÜLDÜ.**
+
+### BL-23 — MemoryState'i "yalnız scheduler adaptörü yazar" ↔ `applyAttempt`'ın `lastAttemptKind/lastQuestionId` yazması
+- Uygulanan: FSRS alanları (`due`, stability, difficulty, reps, lapses, state, learningSteps, lastReview) yalnız adaptörde; `lastAttemptKind/lastQuestionId` `applyAttempt`'ta (`02` §5.2 6h). A15 ve `due =` kod incelemesi kriteri korunur. **ÇÖZÜLDÜ** (`02` > `01` §6.2 genel ifadesi).
+
+### BL-24 — "15 dakika içinde vadeye düşecek" sayımı ve `06` §3.1 saat eşikleri nerede
+- Uygulanan: `src/app` katmanında (due **okur**, yazmaz); `src/engine/**` içinde gün/dakika sabiti yok (U-SC-13c/14 taraması sıkı kalır). Session (`03` §6) engine'dedir, enjekte Clock kullanır, sabit taşımaz. **ÇÖZÜLDÜ.**
+
+### BL-25 — `npm view ts-fsrs version` registry `latest`'i döndürür
+- Bugün `latest = 5.4.2` (uyumlu). Bağlayıcı doğrulama U-SC-01 (`node_modules/ts-fsrs/package.json`). **ÇÖZÜLDÜ.**
+
+### BL-26 — `13` §5 adım 1 migration'ı checksum'dan önce yazar
+- `06` §8 adım 3–4 ve `13` §5 adım 8, B-31: önce gelen formatın kendi checksum'ı, sonra bellekte migration. `13` kendisi "çelişkide `06` kazanır" der. **ÇÖZÜLDÜ.**
+
+### BL-27 — RestoreJournal açılış çözümlemesi: üçüncü hâl ve `aborted` pin'i
+- `06` §8.5 yalnız iki hâl tanımlar; adım 11 (appliedJobId) ile 12 (phase committed) arasındaki çökmede `phase = prepared, appliedJobId = jobId` kalır. `06` §9 pin yalnız `verified/rolled_back`'te kalkar; `aborted` işin ön noktası sonsuza dek pin'li kalır.
+- Uygulanan: `meta.appliedJobId = jobId` ise phase ne olursa olsun commit olmuş sayılır → `committed` yazılır, adım 13–14 (BL-07 varsayılanıyla) koşulur; `appliedJobId = jobId + ":rollback"` → `rolled_back`; pin `verified/rolled_back/aborted` üçünde kalkar. **ÇÖZÜLDÜ** (yorum; B-33 "yarım iş tamamlanmış sayılmaz" korunur).
+
+### BL-28 — Geri yükleme sonrası `generationStartSequence`
+- `06` §3 "nesil başladığındaki sayaç" ↔ `06` §10 tablo "sıfırlanır/yeniden üretilir".
+- Uygulanan: `generationStartSequence` = `replaceAll` sonrası kurulan sayaç (paketin max sequence'ı; boş pakette 0); `generationId` yeniden üretilir. **ÇÖZÜLDÜ** (`06` §3 tanım > §10 özet).
+
+### BL-29 — Acil geri dönüşün başarısı ve journal yazımı (B-32)
+- Uygulanan: acil geri dönüşün başarısı ana DB'nin doğrulanmasıyla ölçülür; journal/pin güncellemesi yazılamazsa geri dönüş yine başarılı sayılır, journal bir sonraki açılışta `appliedJobId = jobId + ":rollback"` görülerek `rolled_back`'e tamamlanır (BL-27). B-32 mock'u journal yazmalarını başarı koşulundan ayırır. **ÇÖZÜLDÜ.**
+
+### BL-30 — `daily` retention: 7 mi, 50.000 Attempt'ta 3 mü
+- Uygulanan: v0'da `RecoveryStore` retention sınırları config parametresidir (`daily: 7`, işlem sınıfı 5, toplam 12); 50.000 eşiğinde otomatik düşürme yazılmaz (ölçüsü tanımsız; A20). **ÇÖZÜLDÜ** (minimum).
+
+### BL-31 — `lastExternalBackupGenerationId` okuma kuralı
+- Uygulanan: hatırlatma hesabında veya geç `Kaydettim` teyidinde `lastExternalBackupGenerationId ≠ meta.generationId` ise işaretçi null sayılır; farklı nesle ait teyit uygulanmaz. Negatif fark üretilemez (B-36). **ÇÖZÜLDÜ.**
+
+### BL-32 — Dexie daha yeni sürümlü DB'yi sessizce dinamik modda açar
+- `13` §6.5 / `06` §6.3 "daha yeni şemalı DB açılırsa uygulama yazmaz" `open()` hatasına güvenirse hiç tetiklenmez (Dexie 4 VersionError'da dinamik moda düşer).
+- Uygulanan: açılıştan hemen sonra `db.verno` ve `meta.schemaVersion` desteklenen aralıkla karşılaştırılır; yüksekse bağlantı kapatılır, yazma yok, salt-okunur kurtarma ekranı + RecoveryReader (B-37). **ÇÖZÜLDÜ** (gerçekleştirim notu).
+
+### BL-33 — E-10 "Yedek alındı." jsdom'da
+- Web `BackupFileService` jsdom'da (ve iki telefonda da) en fazla `initiated` döndürebilir; "Yedek alındı." yalnız `saved`.
+- Uygulanan: E-10 kompozisyon kökünden `saved` döndüren sahte `BackupFileService` enjekte eder (A-04 PlatformServices sahteleri); E-21 her iki dalı gerçek metinlerle sınar. **ÇÖZÜLDÜ.**
+
+### BL-34 — Vitest jsdom ortamında Web Crypto realm uyuşmazlığı
+- Uygulanan: web `HashService` daima `TextEncoder().encode(kanonikJSON)` baytlarını hash'ler (Blob/File buffer'ı değil); E testleri gerekirse Node `crypto` tabanlı HashService enjekte eder (A-04). **ÇÖZÜLDÜ** (gerçekleştirim notu).
+
+### BL-35 — SW tam varlık manifesti Vite'ta hazır gelmez
+- `13` §7 build başına tam varlık listesi + `buildId` ister; Vite `build.manifest` index.html ve `public/` ikonlarını içermez, SW'ye görünmez.
+- Uygulanan (Phase 11): küçük yerel Vite eklentisi (`generateBundle`/`writeBundle`) bundle anahtarları + public varlıkları + `buildId`'yi `sw.js`'e enjekte eder; SW dosya adı sabit (`sw.js`). Ek paket yok. **ÇÖZÜLDÜ** (gerçekleştirim notu).
+
+## 3. Test–faz eşlemesi (Yol B) — onay bekliyor (BL-12)
+
+İlke: her test kimliğinin **tek sahip fazı** vardır ve orada tümüyle yeşillenir; bir testin bir cümlesi ileri faz modülü istiyorsa o cümle ileri fazda **aynı test dosyasına eklenir** (test gevşetilmez, mock ile yeşil ilan edilmez). Aşağıda yalnız `09`'dan sapmalar gerekçeli; sapma olmayan atamalar `09` ile aynıdır.
+
+| Test | `09` fazı | Yol B'de eksik modül | Önerilen sahip faz |
+|---|---|---|---|
+| I-04 | 3 | MemoryState üretimi (policy + scheduler + applyAttempt) | **6** |
+| I-12 | 3 | `ratingFor` (rating 2) | **4** |
+| I-22 | 3 | scheduler + REBUILD; Bugün/Veri DOM | **8b** (motor) · DOM cümlesi **9** |
+| I-14 | 2 | "REBUILD eşit" | **2** (depo, sayaç) · REBUILD cümlesi **6** |
+| I-17 | 2 | "REBUILD migration öncesiyle eşit" | **2** (migration) · REBUILD cümlesi **6** |
+| U-QR-10 | 2 | serializeMemory eşitliği | **6** |
+| U-QR-09 | 2 | UI mesajı | **2** (depo/API) · UI cümlesi **9** (E-17) |
+| U-QR-11 | 2 | `validateBackup` (B-05b) | **2** (API kısmı) · doğrulama cümlesi **10a** (B-05b) |
+| U-QR-12 | 8 | — (migration testi; UI + REBUILD cümleleri) | **2** · REBUILD **6** · UI **9** |
+| B-26 | 2 | post_migration noktası için §7 yedek üretici (resolvedWeights, format 2) | **2** (rollback: DB v1 okunabilir kalır) · post_migration cümlesi **10b** |
+| B-37 | 2 | `migrateBackup`, normal geri yükleme | **2** (şema tanımsız açılış, DB değişmez, `recovery_dump`) · kalan cümleler **10a/10c** |
+| B-25 | 1b | Repository, B-01 tur | **1b** (kanonik JSON + checksum sıra bağımsız) · "B-01 eşitliği" **10c** |
+| B-34 | 1b | geri yükleme iş akışı | **1b** (pin ilkeli: pin'li kayıt silinmez, pin kalkınca silinir) · tam iş akışı **10b** |
+| E-16 | 7 ve 9 | UI | **9** (Phase 7'de U-DS-01 aynı iddiayı motorda doğrular) |
+| U-DQ-14 | 7 | Bugün metni, ayar doğrulaması | **7** (motor: `max(0,…)`, QueueConfig doğrulama) · ekran metni **9** |
+| U-DS-07/12 | 7 | `resolve()` (Phase 8) | **7**: `Session.nextItem` öğeyi döndürür; `resolve` bağlantısı Phase 8'de eklenir |
+| U-SC-11 | 5 | "export'ta" (yedek) | **5** (`resolvedWeights` fonksiyonu 21 sayı) · export cümlesi **10a** |
+| U-SC-15 | 5 | kuyruk ikinci anahtarı | **5** (R=1) · kuyruk cümlesi = U-DQ-02 (**7**) |
+| I-06 | 8b | format-2 yedek üretici, geri yükleme | **10a** (motor çekirdeği: snapshot → yedek → doğrula → boş MemoryRepository.replaceAll → REBUILD eşit) |
+| A-04 | 8b | BackupFileService akışları | **8b** (HashService sahtesi) · BackupFileService sahtesi **10a** |
+| I-18 | 8b | commit sonrası REBUILD | **8b** (`validateBackup` uyarı + `dryRunRebuild` paket config'iyle) · commit eşitliği = B-18 (**10c**) |
+| E-12 | 9 | S12'nin üç yedek/kurtarma bölümü (10c) | **10c** (Phase 9'da yalnız Motor bölümü + sürüm satırı yapılır, E-12 iddia edilmez) |
+| U-RS-07, U-RS-08 | — | — | **8** |
+| I-21 | — | — | **8b** |
+| E-19, E-20 | — | — | **9** |
+| journal yaz/oku (kimliksiz) | 1b | — | **1b**, yerel ad `RJ-01` |
+| SW statik tarama (kimliksiz) | 11 | — | **11**, yerel ad `A-SW-01` |
+| B-11, B-12, B-14 | 10 (10b kapısı) | geri yükleme orkestrasyonu | **10b**: `safeRestore` motor orkestrasyonu (adım 1–15, journal dâhil) UI'sız yazılır; yıkıcı düğme **10c**'de açılır |
+
+İki fazda geçen modüllerin sahibi: `snapshotAll` → 2 (1b yalnız kanonik JSON + HashService + RecoveryStore + journal kaydı) · `reviseQuestion` transaction iskeleti → 2, seçenek/ilişki temizleme kuralları → 8 · `createQuestion` (addQuestion) → 2 · `answerQuestion/answerRecall` kurulumu → 3 · Session + geri al tekrarı → 7 · `validateBackup/migrateBackup/dryRunRebuild` saf fonksiyonlar → 8b (asgari), format/checksum/dosya adı ve sert doğrulama → 10a · açılış orkestrasyonu (aç → migrate → REBUILD) → 8b, journal çözümleme → 10c · manifest/iOS meta → 9, service worker → 11.
+
+Faz başına nihai liste Phase 0 raporunda (kullanıcı onayı sonrası `BASELINE_AUDIT.md` §6'ya işlenir).
+
+## 4. Kapanan maddeler
+
+### BL-03 — Node.js makinede kurulu değildi
+- winget `OpenJS.NodeJS.LTS` kullanıcı onayıyla kuruldu (v24.19.0, npm 11.17.0). **KAPANDI** (2026-09-08).
