@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 291 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 296 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -63,7 +63,8 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
   - Hafıza durumu **varsa** tek soru gelir: **Bu neden geldi?** Merak ettim (ölçüm yok) · Hatırlayamadım · Yanlış yaptım (+ "Bundan emin miydin?") · Karıştırdım (+ hangi atomla).
   - Gerçek başarısızlıkta bir dış kayıt yazılır: `mode: external`, `selfAssessment: again`, zamanı **yakalama anı**. Dışarıda ölçülemeyen alanlar (süre, gösterilen destek) uydurulmaz, boş bırakılır.
 - Başarısızlık anında hafıza durumu yoksa, sen günler sonra işlesen bile ölçüm yazılmaz: kural olayın yaşandığı ana bakar.
-- Aynı kutu öğesi ikinci kez kayıt üretemez; kayıt kimliği o öğeden türetilir.
+- Aynı kutu öğesi ikinci kez kayıt üretemez; kayıt kimliği o öğeden türetilir. Kaydetme yarıda kalırsa (uygulama kapanırsa) ikinci deneme aynı kaydı tamamlar, ikinci bir başarısızlık yazmaz.
+- Ölçüm yazılmayan yakalama, atomu kendi konusunda sıranın başına alır: bugün öğrenmek istediğin şey sıranın sonunda beklemez.
 - Köken bilgisi atoma işlenir: aylar sonra "bunu şu denemede yemiştim" izini korur.
 - Kutu öğeleri olay değildir: düzenlenebilir, atılabilir (silinmez, "atıldı" olur) ve hafızaya hiç dokunmaz.
 

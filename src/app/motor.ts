@@ -10,7 +10,7 @@ import { AttemptBuildError, buildQuestionAttempt, buildRecallAttempt } from '../
 import { compareCodePoint } from '../engine/backup/canonical'
 import type { ContentErrorRequest } from '../engine/question/contentError'
 import type { NewQuestionInput, QuestionPatch, ReviseOutcome } from '../engine/question/plan'
-import { buildExternalRecallAttempt, hadMemoryAt, reasonProducesAttempt, type CaptureReason } from '../engine/capture/capture'
+import { buildExternalRecallAttempt, externalAttemptId, hadMemoryAt, reasonProducesAttempt, type CaptureReason } from '../engine/capture/capture'
 import { buildQueue, todayAttempts, todayCounts, validateQueueConfig, type QueueContext, type TodayCounts } from '../engine/queue/dailyQueue'
 import { applyAttempt, rebuild, type Memory } from '../engine/rebuild/rebuild'
 import { resolve } from '../engine/resolver/resolve'
@@ -18,7 +18,7 @@ import { createScheduler, type Scheduler } from '../engine/scheduler/adapter'
 import { Session, type UndoToken } from '../engine/session/session'
 import { undoAttempt } from '../engine/session/undo'
 import type { Clock, IdGenerator } from '../platform/services'
-import type { Repository } from '../store/repository'
+import { DuplicateAttemptError, type Repository } from '../store/repository'
 import { clockSkewReport, type ClockSkewReport } from './clockSkew'
 
 /** 03 §6.4 — oturum sonunda "N atom 15 dakika içinde yeniden gelecek" (app katmanı sabiti, BL-24). */
@@ -386,15 +386,14 @@ export class Motor {
     const rawText = input.rawText.trim()
     if (!rawText) throw new MotorError('Yakalanan metin boş olamaz.')
     const capturedAt = this.clock.now()
-    const provenance: Provenance | undefined = input.provenanceType
-      ? {
-        type: input.provenanceType,
-        date: capturedAt,
-        ...(input.note?.trim() ? { note: input.note.trim() } : {}),
-        ...(input.context?.trim() ? { context: input.context.trim() } : {}),
-      }
-      : undefined
-    const item: InboxItem = { id: this.ids.newId(), rawText, capturedAt, status: 'pending', ...(provenance ? { provenance } : {}) }
+    // 05 §3.3 adım 3 / §5: köken koşulsuz yazılır; tip seçilmediyse 'kendi' (not ve bağlam kaybolmaz)
+    const provenance: Provenance = {
+      type: input.provenanceType ?? 'kendi',
+      date: capturedAt,
+      ...(input.note?.trim() ? { note: input.note.trim() } : {}),
+      ...(input.context?.trim() ? { context: input.context.trim() } : {}),
+    }
+    const item: InboxItem = { id: this.ids.newId(), rawText, capturedAt, status: 'pending', provenance }
     await this.repo.putInbox(item)
     return item
   }
@@ -459,21 +458,43 @@ export class Motor {
       if (!already) await this.repo.putAtom({ ...atom, provenance: [...list, item.provenance] })
     }
 
+    const eligible = this.askReasonFor(atom.id, item.capturedAt) // F01: başarısızlık anındaki hafıza durumu
+
+    // 05 §3.3 adım 4: confusable YALNIZ "Karıştırdım" dalında ve yalnız neden sorusunun sorulduğu durumda önerilir
     let relationAdded = false
-    if (input.confusedWithAtomId && input.confusedWithAtomId !== atom.id) {
-      if (!c.atoms.some((a) => a.id === input.confusedWithAtomId)) throw new MotorError(`Atom bulunamadı: ${input.confusedWithAtomId}`)
-      await this.repo.putAtomRelation({ fromAtomId: atom.id, toAtomId: input.confusedWithAtomId, type: 'confusable' })
+    if (input.confusedWithAtomId && input.reason === 'confused' && eligible && input.confusedWithAtomId !== atom.id) {
+      const other = c.atoms.find((a) => a.id === input.confusedWithAtomId)
+      if (!other) throw new MotorError(`Atom bulunamadı: ${input.confusedWithAtomId}`)
+      if (other.archived) throw new MotorError('Arşivlenmiş atomla karıştırma ilişkisi kurulmaz.')
+      await this.repo.putAtomRelation({ fromAtomId: atom.id, toAtomId: other.id, type: 'confusable' })
       relationAdded = true
     }
 
     let attempt: RecallAttempt | null = null
-    const eligible = this.askReasonFor(atom.id, item.capturedAt) // F01: başarısızlık anındaki hafıza durumu
     if (input.reason && reasonProducesAttempt(input.reason) && eligible) {
       const built = buildExternalRecallAttempt({ item, atomId: atom.id, reason: input.reason, ...(input.sureAtFailure === undefined ? {} : { sureAtFailure: input.sureAtFailure }), sessionId: this.captureSessionId })
-      attempt = (await this.repo.appendAttempt(built)) as RecallAttempt
-      this.commitAttempt(attempt)
+      try {
+        attempt = (await this.repo.appendAttempt(built)) as RecallAttempt
+        this.commitAttempt(attempt)
+      } catch (e) {
+        // 05 §5a F02: içerik + Attempt + processed TEK mantıksal iştir. Önceki denemede Attempt yazılıp status yazılamamışsa
+        // ikinci deneme aynı id'ye takılır; bu "zaten yazılmış" demektir — hata değil, işi tamamlarız (öğe kilitli kalmaz).
+        if (!(e instanceof DuplicateAttemptError)) throw e
+        const existing = (await this.repo.listAttempts()).find((a) => a.id === externalAttemptId(item.id))
+        if (!existing) throw e
+        attempt = existing as RecallAttempt
+      }
       // yakalama anı geçmişte olabilir → sıra bozulmasın diye tam REBUILD (02 §5.3 monoton kırpma zaten rebuild'de)
       await this.refresh()
+    }
+
+    if (!attempt) {
+      // 05 §2 (Learning Capture / Inquiry) + §3.3 adım 4: ölçüm yazılmadıysa atom yeni-kuyruğunun BAŞINA alınır
+      const fresh = (await this.content()).atoms
+      const sameTopic = fresh.filter((a) => a.topicId === atom.topicId)
+      const minOrder = Math.min(...sameTopic.map((a) => a.sortOrder))
+      const current = fresh.find((a) => a.id === atom.id)!
+      if (current.sortOrder > minOrder) await this.repo.putAtom({ ...current, sortOrder: minOrder - 1 })
     }
 
     const next: InboxItem = { ...item, status: 'processed' }

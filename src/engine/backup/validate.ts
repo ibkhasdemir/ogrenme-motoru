@@ -197,7 +197,9 @@ export function validateSnapshotV2(file: BackupFile): ValidationReport {
     if (!atoms.has(a.primaryAtomIdAtAttempt)) err(`Attempt.primaryAtomIdAtAttempt çözülmüyor: ${a.id}`)
     if (!inEnum(ATTEMPT_MODES, a.mode)) err(`Attempt.mode enum dışı: ${a.id}`)
     // 05 §5a F02: yalnız external (yakalama) Attempt'ında support ve responseTimeMs "uygulanamaz" (null); başka modda null kabul edilmez
-    const external = a.mode === 'external'
+    // muafiyet yalnız external RecallAttempt'ta geçerli (01 §4.5: external yeni Attempt türü açmaz, QuestionAttempt olamaz)
+    const external = a.mode === 'external' && a.kind === 'recall'
+    if (a.mode === 'external' && a.kind !== 'recall') err(`external mod yalnız RecallAttempt'ta olur: ${a.id}`)
     if (!inEnum(OPERATIONS, a.operation)) err(`Attempt.operation enum dışı: ${a.id}`)
     if (!(external && a.support === null) && !inEnum(SUPPORTS, a.support)) err(`Attempt.support enum dışı: ${a.id}`)
     if (!(external && a.responseTimeMs === null) && !isNonNegInt(a.responseTimeMs)) err(`Attempt.responseTimeMs negatif/tamsayı değil: ${a.id}`)
@@ -220,6 +222,8 @@ export function validateSnapshotV2(file: BackupFile): ValidationReport {
       if (ra.confidence !== null) err(`RecallAttempt.confidence null olmalı: ${ra.id}`)
       if (!inEnum(SELF_ASSESSMENTS, ra.selfAssessment)) err(`selfAssessment enum dışı: ${ra.id}`)
       if (ra.atomId !== ra.primaryAtomIdAtAttempt) err(`RecallAttempt.atomId ≠ primaryAtomIdAtAttempt: ${ra.id}`)
+      // 05 §2 / 01 §4.5: external olay yalnız gerçek başarısızlıktır → selfAssessment 'again' dışında olamaz
+      if (a.mode === 'external' && ra.selfAssessment !== 'again') err(`external RecallAttempt.selfAssessment 'again' olmalı: ${ra.id}`)
     }
   }
   for (const a of attempts as Attempt[]) if (a.replayOfAttemptId !== undefined && !attemptIds.has(a.replayOfAttemptId)) err(`replayOfAttemptId bilinmeyen Attempt'a işaret ediyor: ${a.id}`)
