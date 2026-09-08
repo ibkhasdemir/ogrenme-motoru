@@ -65,6 +65,8 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | Y-06 | Konu birleştirme | tek konu seçip mevcut bir konunun adını vermek atomları oraya taşır; sayılar toplanır | ☐ | |
 | Y-07 | Taşıma sonrası öğrenme | Bugün sayıları ve vadeler değişmemiş; çalışma döngüsü aynı | ☐ | |
 | Y-08 | 0/0/0 koruması (F-1) | yedek paylaşımından dönüşte sayılar doğru; bozulursa "Depo geçici olarak okunamadı" mesajı (sıfır değil) | ☐ | |
+| Y-09 | Ders notu kutusu | nota yapıştırıp "Şablonu paylaş" → sohbete şablon + not tek parça gider | ☐ | |
+| Y-10 | Atom ekranı → Çengel ekle | kendi kodlaman kaydedilir, kartta "Çengeli göster" ile çıkar; aynı metin ikinci kez "zaten var" | ☐ | |
 
 ## 4. Notlar
 - Bu liste `11` kural 4'e göre kod yazan tarafından yazılan dokümanlardandır; sonuçlar buraya işlenir, spec'e değil.

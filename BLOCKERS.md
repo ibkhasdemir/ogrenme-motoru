@@ -81,6 +81,7 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Karar (Claude, sahibi adına — şema değişmeden yapılabilen kısım): içe aktarmada `altbaslik` alanı Topic adına `" › "` ile eklenir ("18. yy Osmanlı › Islahatlar"); İçerik listesi Ders › Konu gruplarına ayrılır (sayılarla, açılır-kapanır); `cengeller`/`kodlamalar` bölümü mevcut atomlara çengel ekler (`Motor.addHook`); şablon yapay zekâya kullanıcının kodlamalarını uydurmadan aktarmayı söyler. Veri modeli ve yedek formatı değişmedi.
 - Ertelenen (sahibi kararı gerekir): gerçek hiyerarşi (`Topic.parentTopicId`, şema 3, migration, yedek formatı 3); kazanım (learning outcome) alanı; konu bazında doğruluk/tanı görünümü (`10` non-goal "zayıf halka" — spec revizyonu gerekir). Ad içi ayraç geçici kodlamadır; gerçek hiyerarşiye geçilirse migration ayraçtan böler.
 - 2026-09-08 ikinci tur (telefon: 115 atom / 37 konu): şablonda ünite kuralı sertleştirildi; içe aktarmada `applyUnitToPlan` ("Ünite" alanı) ve `unitWarning`; `Motor.renameTopic` (aynı derste aynı ad → birleştirme, atomlar taşınır, ham olaylar ve vadeler değişmez); S11c "Konuları düzenle" ekranı; içerik listesi ünite bazlı gruplama + alt başlık etiketi (`splitTopicPath`/`joinTopicPath`).
+- Ek (aynı gün): içe aktarma ekranında "Ders notun" kutusu (şablon + not tek parça paylaşılır), atom ekranında "Çengel ekle" (varsayılan tür kodlama; `Motor.addHook`), `kazanim` = `altbaslik` alias.
 - Durum: **UYGULANDI (kısmi)**; ertelenenler açık.
 
 ### BL-40 — "Yedek al" dosya adımı elle kalıyor (iPhone)
