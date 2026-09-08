@@ -11,6 +11,8 @@ import { button, field, h, input, textarea } from './dom'
 
 export interface ImportUiState {
   text: string
+  /** ders notu: şablonla birlikte tek parça olarak paylaşılır (kullanıcı iki yerde kopyala-yapıştır yapmasın) */
+  notes: string
   /** "Tümünü şu ünitenin altına koy" — yapay zekâ üniteyi atlarsa dizini burada toparlarız (BL-39) */
   unit: string
   plan: ImportPlan | null
@@ -48,6 +50,14 @@ Biçim:
 Notlar:
 (buraya yapıştır)
 `
+
+export const NOTES_PLACEHOLDER = '(buraya yapıştır)'
+
+/** Şablon + kullanıcının notu tek parça: paylaşınca sohbete ikinci bir yapıştırma gerekmez. */
+export function buildPrompt(notes: string): string {
+  const n = notes.trim()
+  return n ? IMPORT_PROMPT_TEMPLATE.replace(NOTES_PLACEHOLDER, n) : IMPORT_PROMPT_TEMPLATE
+}
 
 async function existingContent(ctx: AppContext): Promise<ExistingContent> {
   const c = await ctx.motor.content()
@@ -87,6 +97,10 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   textIn.value = state.text
   textIn.addEventListener('input', () => { state.text = textIn.value; state.plan = null })
 
+  const notesIn = textarea({ placeholder: 'Ders notunu buraya yapıştır (isteğe bağlı)', 'aria-label': 'Ders notu', rows: 4, 'data-testid': 'import-notes' })
+  notesIn.value = state.notes
+  notesIn.addEventListener('input', () => { state.notes = notesIn.value })
+
   const unitIn = input({ placeholder: 'İsteğe bağlı — örn. 18. yy Osmanlı', 'aria-label': 'Ünite', autocomplete: 'off', 'data-testid': 'import-unit' })
   unitIn.value = state.unit
   unitIn.addEventListener('input', () => { state.unit = unitIn.value })
@@ -123,8 +137,8 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   }
   const copyTemplate = async () => {
     try {
-      await navigator.clipboard.writeText(IMPORT_PROMPT_TEMPLATE)
-      ctx.notice("Şablon kopyalandı. Yapay zekâ sohbetine yapıştır, notlarını ekle, çıkan JSON'u buraya getir.", 'ok')
+      await navigator.clipboard.writeText(buildPrompt(state.notes))
+      ctx.notice(state.notes.trim() ? "Şablon + notların kopyalandı. Yapay zekâ sohbetine yapıştır, çıkan JSON'u buraya getir." : "Şablon kopyalandı. Yapay zekâ sohbetine yapıştır, notlarını ekle, çıkan JSON'u buraya getir.", 'ok')
     } catch {
       ctx.notice('Kopyalanamadı; "Şablonu göster" ile elle seç.', 'error')
     }
@@ -132,7 +146,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   }
   const shareTemplate = async () => {
     try {
-      await (navigator as ShareNav).share!({ text: IMPORT_PROMPT_TEMPLATE, title: 'Öğrenme Motoru şablonu' })
+      await (navigator as ShareNav).share!({ text: buildPrompt(state.notes), title: 'Öğrenme Motoru şablonu' })
     } catch {
       // vazgeçildi ya da desteklenmiyor; sessiz
     }
@@ -145,6 +159,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
       const plan = await buildPlan() // güncel içerikle yeniden planla
       const out = await applyContentImport(ctx.motor, plan, recoveryDeps(ctx, services))
       state.text = ''
+      state.notes = ''
       state.unit = ''
       state.plan = null
       const parts = [`${out.atomsAdded} atom`, `${out.questionsAdded} soru`]
@@ -165,11 +180,12 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   const toList = () => void ctx.navigate({ name: 'content', view: { kind: 'list' } })
   return h('div', { class: 'screen', 'data-screen': 'import' },
     h('div', { class: 'row' }, button('← İçerik', toList, { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik içe aktar')),
-    h('p', { class: 'text-support' }, "1) Şablonu bir yapay zekâ sohbetine gönder, altına notlarını ekle. 2) Çıkan JSON'u kopyala. 3) Burada Panodan yapıştır → Önizle → Ekle. Yalnız ekler; mevcut içerik ve öğrenme geçmişi değişmez."),
+    h('p', { class: 'text-support' }, "1) Ders notunu aşağıya yapıştır, Şablonu paylaş (ya da kopyala) → yapay zekâ sohbeti. 2) Çıkan JSON'u kopyala. 3) Burada Panodan yapıştır → Önizle → Ekle. Yalnız ekler; mevcut içerik ve öğrenme geçmişi değişmez."),
     h('div', { class: 'row' },
       canShareText() ? button('Şablonu paylaş', () => void shareTemplate(), { class: 'btn-inline', testid: 'share-template' }) : null,
       button('Şablonu kopyala', () => void copyTemplate(), { class: 'btn-inline', testid: 'copy-template' }),
     ),
+    field('Ders notun (isteğe bağlı)', notesIn, 'Buraya yapıştırırsan şablonla birlikte tek parça gider; sohbette ikinci yapıştırma gerekmez.'),
     h('details', {}, h('summary', { class: 'text-support' }, 'Şablonu göster'), h('pre', { class: 'import-template', 'data-testid': 'import-template' }, IMPORT_PROMPT_TEMPLATE)),
     h('div', { class: 'row' },
       canReadClipboard() ? button('Panodan yapıştır', () => void pasteFromClipboard(), { variant: 'secondary', class: 'btn-inline', testid: 'paste-import' }) : null,

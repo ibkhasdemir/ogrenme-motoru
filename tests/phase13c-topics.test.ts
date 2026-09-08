@@ -5,6 +5,7 @@ import { applyUnitToPlan, joinTopicPath, parseContentImport, planContentImport, 
 import { serializeMemory } from '../src/engine/rebuild/rebuild'
 import { MemoryRepository } from '../src/store/memory/memoryRepository'
 import { mountApp, type AppHandle } from '../src/ui/app'
+import { IMPORT_PROMPT_TEMPLATE, NOTES_PLACEHOLDER, buildPrompt } from '../src/ui/contentImport'
 import { FakeClock, fakeIds } from './helpers/engineFixture'
 
 // Phase 13c (BL-39) — telefon bulgusu 2026-09-08: yapay zekâ üniteyi atlayıp her olayı ayrı "konu" yaptı (115 atom / 37 konu).
@@ -154,5 +155,44 @@ describe('Ekran — Konuları düzenle ve ünite bazlı liste', () => {
     const topics = (await motor.content()).topics.map((t) => t.name)
     expect(topics.every((n) => n.startsWith('18. yy Osmanlı › '))).toBe(true)
     expect(document.querySelectorAll('details[data-group]')).toHaveLength(1)
+  })
+})
+
+describe('Şablon + not tek parça (telefonda iki kopyala-yapıştır yerine bir tane)', () => {
+  it('buildPrompt: not verilince yer tutucunun yerine geçer, boşsa şablon aynen kalır', () => {
+    expect(IMPORT_PROMPT_TEMPLATE).toContain(NOTES_PLACEHOLDER)
+    const withNotes = buildPrompt('  Lale Devri 1718-1730 arasıdır.  ')
+    expect(withNotes).toContain('Lale Devri 1718-1730 arasıdır.')
+    expect(withNotes).not.toContain(NOTES_PLACEHOLDER)
+    expect(withNotes.startsWith('Aşağıdaki notları')).toBe(true)
+    expect(buildPrompt('   ')).toBe(IMPORT_PROMPT_TEMPLATE)
+  })
+
+  it('ekran: Ders notu kutusuna yazılan metin "Şablonu kopyala" ile panoya şablonla birlikte gider', async () => {
+    const flush = async (n = 14) => { for (let i = 0; i < n; i++) await new Promise((r) => setTimeout(r, 0)) }
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const repo = new MemoryRepository(fakeIds('gen'))
+    const motor = await Motor.create({ repo, clock: new FakeClock(), ids: fakeIds('id') })
+    const clip = { text: '' }
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => { clip.text = t }, readText: async () => clip.text } })
+    const handle = mountApp(root, { motor, appVersion: '0.2.0' })
+    try {
+      await flush()
+      const go = (label: string) => [...document.querySelectorAll<HTMLElement>('button')].find((b) => (b.textContent ?? '').trim() === label)!
+      go('İçerik').click(); await flush()
+      document.querySelector<HTMLElement>('[data-testid="to-import"]')!.click(); await flush()
+      const notes = document.querySelector<HTMLTextAreaElement>('[data-testid="import-notes"]')!
+      notes.value = 'Patrona Halil İsyanı 1730.'
+      notes.dispatchEvent(new Event('input'))
+      document.querySelector<HTMLElement>('[data-testid="copy-template"]')!.click(); await flush()
+      expect(clip.text).toContain('Patrona Halil İsyanı 1730.')
+      expect(clip.text).not.toContain(NOTES_PLACEHOLDER)
+      expect(document.body.textContent).toContain('Şablon + notların kopyalandı')
+    } finally {
+      handle.destroy()
+      document.body.replaceChildren()
+      delete (navigator as unknown as { clipboard?: unknown }).clipboard
+    }
   })
 })

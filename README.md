@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 263 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 265 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -57,7 +57,7 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 
 Atom ve soruları tek tek yazmak yerine JSON olarak ekle (BL-38; spec dışı, sahibi kararıyla eklendi). Uygulamanın içinde yapay zekâ yoktur: JSON'u dışarıda üretirsin (bir yapay zekâ sohbeti, tablo ya da elle), uygulamaya yapıştırırsın.
 
-1. İçerik → **İçe aktar** → **Şablonu paylaş** (iPhone: paylaşım sayfasından doğrudan ChatGPT/Claude uygulamasına) ya da **Şablonu kopyala**. Şablon, sohbete yapıştırılacak hazır istektir; sonuna ders notlarını ekle (fotoğraftan çıkarılmış metin de olur).
+1. İçerik → **İçe aktar** → ders notunu **Ders notun** kutusuna yapıştır → **Şablonu paylaş** (iPhone: paylaşım sayfasından doğrudan ChatGPT/Claude uygulamasına) ya da **Şablonu kopyala**. Not yazdıysan şablonla birlikte tek parça gider; sohbette ikinci bir yapıştırma gerekmez. Kutuyu boş bırakırsan yalnız şablon gider, notu sohbette eklersin.
 2. Çıkan JSON'u kopyala → uygulamada **Panodan yapıştır** (ya da kutuya elle yapıştır / `.json` dosyası seç) → **Önizle** → "N atom, M soru eklenecek" → **Ekle**. Yapay zekâ çıktısı ```json çitli ya da açıklamalı gelse de okunur; yalnız sarmalayıcı temizlenir, veri "düzeltilmez".
 3. Yalnız ekler: mevcut içerik ve öğrenme geçmişi değişmez. Aynı metinli atom varsa yeniden eklenmez, sorular/çengeller ona bağlanır. Tek bir hatalı öğe varsa hiçbir şey eklenmez; hata listesi hangi öğe olduğunu söyler. Kurtarma deposu bağlıysa önce `pre_import` kurtarma noktası alınır.
 4. **Dizin:** `konu` ünite düzeyidir ve bir ders notu boyunca aynı kalır ("18. yy Osmanlı"); ayrıntı `altbaslik` alanına gider ("Küçük Kaynarca Antlaşması"). Uygulama bunu "Ünite › Alt başlık" adlı konu olarak saklar (veri modeli iki seviyeli kalır, BL-39); İçerik listesi **ünite** gruplarına ayrılır, alt başlıklar grubun içinde etiketlenir.

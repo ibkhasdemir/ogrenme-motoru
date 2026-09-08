@@ -75,7 +75,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   let noticeState: { text: string; kind: 'ok' | 'error' | 'info' } | null = null
   let renderSeq = 0
   const backupState: BackupSectionState = { pendingConfirm: null, lastMessage: null }
-  const importState: ImportUiState = { text: '', unit: '', plan: null, error: null, busy: false }
+  const importState: ImportUiState = { text: '', notes: '', unit: '', plan: null, error: null, busy: false }
 
   const ctx: AppContext = {
     motor,
