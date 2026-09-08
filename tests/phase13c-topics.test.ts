@@ -36,8 +36,8 @@ describe('İçe aktarmada ünite', () => {
 
   it('unitWarning: parçalı dizinde uyarır, toplu dizinde ve küçük dosyada sessiz', () => {
     const parcali = planContentImport(parseContentImport(text(flatNotes(12))), { atoms: [], questions: [] })
-    expect(unitWarning(parcali)).toMatch(/12 atom 12 ayrı konuya dağılmış/)
-    expect(unitWarning(applyUnitToPlan(parcali, '18. yy Osmanlı'))).toMatch(/12 ayrı konuya/) // ünite verilse de alt başlıklar ayrı konu; uyarı bilgilendirir
+    expect(unitWarning(parcali)).toMatch(/12 atom 12 ayrı üniteye dağılmış/)
+    expect(unitWarning(applyUnitToPlan(parcali, '18. yy Osmanlı'))).toBeNull() // ünite verilince tek ünite kalır → uyarı düşer
     const az = planContentImport(parseContentImport(text(flatNotes(4))), { atoms: [], questions: [] })
     expect(unitWarning(az)).toBeNull()
     const toplu = planContentImport(parseContentImport(text({ atomlar: Array.from({ length: 12 }, (_, i) => ({ ders: 'Tarih', konu: '18. yy Osmanlı', altbaslik: i < 6 ? 'Islahatlar' : 'Savaşlar', atom: `Atom ${i}.`, soru: `Atom ${i}?` })) })), { atoms: [], questions: [] })
@@ -120,9 +120,12 @@ describe('Ekran — Konuları düzenle ve ünite bazlı liste', () => {
     expect((byTestId('move-topics') as HTMLButtonElement).disabled).toBe(true)
     for (const b of boxes) { b.checked = true; b.dispatchEvent(new Event('change')) }
     expect(byTestId('topic-selection')!.textContent).toBe('3 konu seçili')
-    expect((byTestId('move-topics') as HTMLButtonElement).disabled).toBe(false)
+    expect((byTestId('move-topics') as HTMLButtonElement).disabled).toBe(true) // ünite alanı boşken taşıma kapalı
     const unit = document.querySelector<HTMLInputElement>('input[aria-label="Ünite adı"]')!
     unit.value = '18. yy Osmanlı'
+    unit.dispatchEvent(new Event('input')) // gerçek yazma gibi: düğme ünite doluyken etkinleşir
+    await flush()
+    expect((byTestId('move-topics') as HTMLButtonElement).disabled).toBe(false)
     await click(byTestId('move-topics')!)
     expect(document.body.textContent).toContain('3 konu "18. yy Osmanlı" ünitesinin altına taşındı')
     expect((await motor.content()).topics.map((t) => t.name).sort()).toEqual(['18. yy Osmanlı › Küçük Kaynarca', '18. yy Osmanlı › Mora Seferi', '18. yy Osmanlı › Prut Savaşı'])
@@ -146,7 +149,7 @@ describe('Ekran — Konuları düzenle ve ünite bazlı liste', () => {
     ta.value = text(flatNotes(12))
     ta.dispatchEvent(new Event('input'))
     await click(byTestId('preview-import')!)
-    expect(byTestId('import-unit-warning')!.textContent).toMatch(/12 atom 12 ayrı konuya dağılmış/)
+    expect(byTestId('import-unit-warning')!.textContent).toMatch(/12 atom 12 ayrı üniteye dağılmış/)
     const unit = byTestId('import-unit') as HTMLInputElement
     unit.value = '18. yy Osmanlı'
     unit.dispatchEvent(new Event('input'))

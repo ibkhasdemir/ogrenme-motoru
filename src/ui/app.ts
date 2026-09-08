@@ -145,6 +145,48 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     await ctx.navigate({ name: 'today' })
   }
 
+  // --- render sürekliliği ---
+  // Her render ekranı sıfırdan kurar. Telefonda bunun iki görünür bedeli var: yazarken odak (ve klavye) kaybolur, açık
+  // <details> panelleri kapanır. Aşağıdaki iki yardımcı, aynı kimliği taşıyan öğeye odağı ve açıklığı geri verir.
+  function focusKeyOf(el: Element | null): string | null {
+    if (!el || el === document.body) return null
+    const k = el.getAttribute('data-testid') ?? el.getAttribute('aria-label') ?? el.id
+    return k || null
+  }
+  function captureFocus(): { key: string; start: number | null; end: number | null } | null {
+    const el = document.activeElement
+    const key = focusKeyOf(el)
+    if (!key || !root.contains(el)) return null
+    const f = el as HTMLInputElement | HTMLTextAreaElement
+    const selectable = typeof f.selectionStart === 'number'
+    return { key, start: selectable ? f.selectionStart : null, end: selectable ? f.selectionEnd : null }
+  }
+  function restoreFocus(saved: { key: string; start: number | null; end: number | null } | null): void {
+    if (!saved) return
+    // CSS.escape yalnız CSS nesnesine bağlıyken çalışır (koparılırsa TypeError); yoksa tırnak/ters bölü kaçışı yeter
+    const esc = typeof window.CSS?.escape === 'function' ? window.CSS.escape(saved.key) : saved.key.replace(/["\\]/g, '\\$&')
+    const el = root.querySelector<HTMLElement>(`[data-testid="${esc}"], [aria-label="${esc}"], #${esc}`)
+    if (!el) return
+    el.focus({ preventScroll: true })
+    const f = el as HTMLInputElement | HTMLTextAreaElement
+    if (saved.start !== null && typeof f.setSelectionRange === 'function') {
+      try { f.setSelectionRange(saved.start, saved.end ?? saved.start) } catch { /* desteklemeyen tip */ }
+    }
+  }
+  function captureOpenPanels(): Set<string> {
+    const open = new Set<string>()
+    for (const d of root.querySelectorAll<HTMLDetailsElement>('details[data-keep-key]')) {
+      if (d.open) open.add(d.getAttribute('data-keep-key')!)
+    }
+    return open
+  }
+  function restoreOpenPanels(open: Set<string>): void {
+    if (!open.size) return
+    for (const d of root.querySelectorAll<HTMLDetailsElement>('details[data-keep-key]')) {
+      if (open.has(d.getAttribute('data-keep-key')!)) d.open = true
+    }
+  }
+
   // --- render ---
   async function render(): Promise<void> {
     const seq = ++renderSeq
@@ -155,6 +197,8 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       el = h('div', { class: 'screen' }, h('div', { class: 'notice notice-error' }, `Hata: ${(e as Error).message}`), button("Bugün'e dön", () => void leaveToToday()))
     }
     if (seq !== renderSeq) return // araya yeni render girdi
+    const savedFocus = captureFocus()
+    const openPanels = captureOpenPanels()
     clear(root)
     if (deps.updates?.pending() && (screen.name === 'today' || screen.name === 'data')) {
       el.prepend(h('div', { class: 'notice notice-ok', role: 'status', 'data-testid': 'update-bar' }, 'Yeni sürüm hazır · ', button('Yenile', () => deps.updates!.apply(), { variant: 'quiet', class: 'btn-inline', testid: 'update-apply' })))
@@ -171,6 +215,8 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       ))
     } else if (undoBar && !tokenAlive(undoBar.token)) undoBar = null
     root.appendChild(el)
+    restoreOpenPanels(openPanels)
+    restoreFocus(savedFocus)
   }
 
   async function renderScreen(): Promise<HTMLElement> {

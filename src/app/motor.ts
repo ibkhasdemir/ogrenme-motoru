@@ -385,10 +385,10 @@ export class Motor {
     const c = await this.content()
     const topic = c.topics.find((t) => t.id === topicId)
     if (!topic) throw new MotorError(`Konu bulunamadı: ${topicId}`)
+    if (topic.name === name) return { topicId, merged: false, movedAtoms: 0 } // ad değişmiyor → hiçbir şey yapma (aynı adlı boş kabuğa taşımayı da önler)
     const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr')
     const target = c.topics.find((t) => t.id !== topicId && t.subjectId === topic.subjectId && norm(t.name) === norm(name))
     if (!target) {
-      if (topic.name === name) return { topicId, merged: false, movedAtoms: 0 }
       await this.repo.putTopic({ ...topic, name })
       return { topicId, merged: false, movedAtoms: 0 }
     }

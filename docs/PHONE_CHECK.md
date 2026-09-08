@@ -94,4 +94,15 @@ Yama (Motor): aynı depoda sequence geri gitmez; gerileme veya "olay varken atom
 
 **F-6 — İçe aktarmada dizin parçalandı (115 atom / 37 konu).** Yapay zekâ ünite seviyesini atlayıp her olayı ayrı `konu` yaptı ("Tarih › Küçük Kaynarca"), alt başlık hiç kullanılmadı. Yama: şablonda üç seviye ve "1–3 konu, 5–20 alt başlık" kuralı; içe aktarma ekranında **Ünite** alanı (tümünü o ünitenin altına koyar); parçalı dizinde uyarı; mevcut veriyi düzeltmek için **İçerik → Konular** ekranı (çoklu seçim → ünite altına taşı; tek seçim → yeniden adlandır; aynı ad → birleştir). İçerik listesi artık ünite bazında gruplanır, alt başlıklar grup içinde etiketlidir. Testler: phase13c. Öğrenme geçmişi ve vadeler etkilenmez (Attempt atoma bağlıdır).
 
+**F-7 — Bağımsız denetimde bulunan 8 hata (2026-09-08, iki inceleme ajanı; hepsi düzeltildi, `tests/phase13d-audit-fixes.test.ts`).**
+1. Konular ekranında ad alanı önceki seçimin adını tutuyordu → yanlış konu sessizce **birleştirilebiliyordu** (veri kaybı riski). Artık seçim değişince alan yenilenir, seçim kalkınca temizlenir, sayaç seçili konunun adını yazar.
+2. Toplu taşımada farklı ünitelerin aynı adlı alt başlıkları (iki ayrı "Islahatlar") istemsiz birleşiyordu → çakışma önceden saptanır, taşıma yapılmaz, hangi konuların çakıştığı söylenir.
+3. Adı değiştirmeden "yeniden adlandır" demek atomları boş kabuk konuya taşıyordu → ad aynıysa hiçbir şey yapılmaz.
+4. İçe aktarmada zaten var olan atomun satır içi `cengel`'i sessizce kayboluyordu → mevcut atoma bağlanır (çift ise atlanır). Şablon kodlamaları bu alana yazdırdığı için önemliydi.
+5. Ekle bir hatayla dönerse düğme kalıcı kilitli kalıyordu → hata sonrası yeniden denenebilir.
+6. Çengel kaydetmede çift dokunuş aynı çengeli iki kez yazıyordu (silme yolu yok) → tek yazma.
+7. Ünite/metin değişince ekrandaki önizleme bayat kalıyordu → önizleme geçersizleşir, Ekle yeniden Önizle ister.
+8. `parseLooseJson` metin içindeki ``` dizisini siliyordu ve JSON sonrası açıklamada `}` varsa geçerli girdiyi reddediyordu → çit yalnız kendi satırındayken atılır, dengeli parantezle ikinci bir aday denenir. Ayrıca "N ayrı konuya dağılmış" uyarısı artık ünite sayar (ideal dizinde yanlış uyarı vermez).
+Ek: arayüz genelinde render sonrası odak/imleç ve açık paneller korunur (aramada telefon klavyesi kapanmıyor).
+
 **F-3 — iPhone depo ayrımı (davranış, hata değil).** Safari sekmesi ile ana ekran uygulaması **ayrı** veri ve ayrı service worker tutar; birinde Yenile'ye basmak diğerini güncellemez. İkonu silip yeniden eklemek **yeni, boş bir uygulama** oluşturur; eski ikonun verisi onunla gider. Kural: tek ikon kullan, ikonu silmeden önce dış yedek al; güncelleme uygulamanın içinde gelir, ikon yeniden eklenmez. README'ye yazıldı.

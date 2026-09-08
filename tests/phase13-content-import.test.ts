@@ -82,7 +82,8 @@ describe('planContentImport — çiftler ve bağlama', () => {
     expect(plan.atoms.map((a) => a.text)).toEqual([ATOM2])
     expect(plan.skippedAtoms).toBe(1)
     expect(plan.questions[0]!.atom).toEqual({ kind: 'existing', atomId: 'atm-1' })
-    expect(summarizePlan(plan)).toBe('1 atom, 1 soru eklenecek · 1 atom zaten var (atlanır)')
+    // atlanan atomun satır içi çengeli mevcut atoma taşınır (E1 düzeltmesi)
+    expect(summarizePlan(plan)).toBe('1 atom, 1 soru eklenecek · 1 çengel mevcut atomlara eklenecek · 1 atom zaten var (atlanır)')
   })
 
   it('dosya içi çift atom bir kez eklenir; mevcut aynı soru atlanır; bilinmeyen atom referansı hata', () => {
@@ -126,8 +127,8 @@ describe('applyContentImport — yalnız ekler; pre_import noktası; hata → hi
     expect(rev.options.find((o) => o.id === rev.correctOptionId)?.text).toBe('1839')
     // aynı dosya tekrar: plan boş → uygulanmaz
     const c2 = await motor.content()
-    const plan2 = planContentImport(parseContentImport(text(SAMPLE)), { atoms: c2.atoms, questions: [{ primaryAtomId: q.primaryAtomId, text: rev.text, archived: false }] })
-    expect(plan2).toMatchObject({ atoms: [], questions: [], skippedAtoms: 2, skippedQuestions: 1 })
+    const plan2 = planContentImport(parseContentImport(text(SAMPLE)), { atoms: c2.atoms, questions: [{ primaryAtomId: q.primaryAtomId, text: rev.text, archived: false }], hooks: c2.hooks.map((hk) => ({ atomId: hk.atomId, content: hk.content })) })
+    expect(plan2).toMatchObject({ atoms: [], questions: [], hooks: [], skippedAtoms: 2, skippedQuestions: 1, skippedHooks: 1 })
     await expect(applyContentImport(motor, plan2, null)).rejects.toThrow(/Eklenecek yeni içerik yok/)
     expect((await motor.content()).atoms).toHaveLength(2)
   })

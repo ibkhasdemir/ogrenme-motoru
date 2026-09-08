@@ -42,42 +42,66 @@ async function renderTopics(ctx: AppContext): Promise<HTMLElement> {
     .filter((r) => r.atoms > 0)
     .sort((a, b) => (a.subject?.name ?? '').localeCompare(b.subject?.name ?? '', 'tr') || a.topic.name.localeCompare(b.topic.name, 'tr'))
   const selected = new Set<string>()
+  let prefilledId: string | null = null // ad alanı hangi konu için dolduruldu; seçim değişince yenilenir (bayat adla yanlış konuyu birleştirme riski)
+  let busy = false
   const unitIn = input({ placeholder: 'Ünite adı (örn. 18. yy Osmanlı)', 'aria-label': 'Ünite adı', autocomplete: 'off' })
   const nameIn = input({ placeholder: 'Yeni ad', 'aria-label': 'Yeni konu adı', autocomplete: 'off' })
   const moveBtn = button('Seçilenleri ünite altına taşı', () => void move(), { variant: 'primary', disabled: true, testid: 'move-topics' })
   const renameBtn = button('Seçileni yeniden adlandır', () => void rename(), { disabled: true, testid: 'rename-topic' })
   const count = h('span', { class: 'text-meta', 'data-testid': 'topic-selection' }, '0 konu seçili')
   const sync = () => {
-    count.textContent = `${selected.size} konu seçili`
-    moveBtn.disabled = selected.size === 0
-    renameBtn.disabled = selected.size !== 1
-    if (selected.size === 1) {
-      const only = rows.find((r) => r.topic.id === [...selected][0])
-      if (only && !nameIn.value.trim()) nameIn.value = only.topic.name
-    }
+    const only = selected.size === 1 ? rows.find((r) => r.topic.id === [...selected][0]) : undefined
+    if (only && only.topic.id !== prefilledId) { nameIn.value = only.topic.name; prefilledId = only.topic.id }
+    if (!only && prefilledId !== null) { nameIn.value = ''; prefilledId = null }
+    count.textContent = only ? `1 konu seçili: ${only.topic.name}` : `${selected.size} konu seçili`
+    moveBtn.disabled = busy || selected.size === 0 || !unitIn.value.trim()
+    renameBtn.disabled = busy || !only || !nameIn.value.trim()
   }
+  unitIn.addEventListener('input', sync)
+  nameIn.addEventListener('input', sync)
   const move = async () => {
     const unit = unitIn.value.trim()
-    if (!unit || !selected.size) return
-    let merged = 0
-    for (const id of selected) {
-      const row = rows.find((r) => r.topic.id === id)
-      if (!row) continue
-      const out = await ctx.motor.renameTopic(id, joinTopicPath(unit, row.topic.name))
-      if (out.merged) merged++
+    if (busy || !unit || !selected.size) return
+    // iki seçili konu aynı ada inerse taşıma istemsiz birleştirme olur (ör. iki farklı ünitenin "Islahatlar"ı) → yapılmaz
+    const picked = [...selected].map((id) => rows.find((r) => r.topic.id === id)).filter((r): r is (typeof rows)[number] => !!r)
+    const clash = new Map<string, string[]>()
+    for (const r of picked) {
+      const target = joinTopicPath(unit, r.topic.name).toLocaleLowerCase('tr')
+      clash.set(target, [...(clash.get(target) ?? []), r.topic.name])
     }
-    ctx.notice(`${selected.size} konu "${unit}" ünitesinin altına taşındı${merged ? `; ${merged} tanesi aynı adlı konuyla birleşti` : ''}. Atomlar ve öğrenme geçmişi değişmedi.`, 'ok')
-    await ctx.navigate({ name: 'content', view: { kind: 'topics' } })
+    const collided = [...clash.values()].filter((names) => names.length > 1)
+    if (collided.length) {
+      ctx.notice(`Taşınmadı: şu konular aynı ada inip birleşirdi — ${collided.map((n) => n.join(' + ')).join('; ')}. Önce adlarını farklılaştır.`, 'error')
+      return ctx.render()
+    }
+    busy = true
+    sync()
+    try {
+      let merged = 0
+      for (const r of picked) {
+        const out = await ctx.motor.renameTopic(r.topic.id, joinTopicPath(unit, r.topic.name))
+        if (out.merged) merged++
+      }
+      ctx.notice(`${selected.size} konu "${unit}" ünitesinin altına taşındı${merged ? `; ${merged} tanesi aynı adlı konuyla birleşti` : ''}. Atomlar ve öğrenme geçmişi değişmedi.`, 'ok')
+      await ctx.navigate({ name: 'content', view: { kind: 'topics' } })
+    } catch (e) {
+      busy = false
+      ctx.notice(`Taşınamadı: ${(e as Error).message}`, 'error')
+      await ctx.render()
+    }
   }
   const rename = async () => {
     const id = [...selected][0]
     const name = nameIn.value.trim()
-    if (!id || !name) return
+    if (busy || !id || !name) return
+    busy = true
+    sync()
     try {
       const out = await ctx.motor.renameTopic(id, name)
       ctx.notice(out.merged ? `Konular birleştirildi; ${out.movedAtoms} atom taşındı.` : 'Konu adı değiştirildi.', 'ok')
       await ctx.navigate({ name: 'content', view: { kind: 'topics' } })
     } catch (e) {
+      busy = false
       ctx.notice((e as Error).message, 'error')
       await ctx.render()
     }
@@ -155,7 +179,7 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
     search,
     missingPrompt.length ? h('div', { class: 'stack' }, h('p', { class: 'text-support' }, 'Soru yüzü eksik olan atomlar çalışılmaz; tamamlayınca kuyruğa girer.'), missingPrompt.map((a) => row(a, 'soru yüzü eksik'))) : null,
     rest.length
-      ? h('div', { class: 'stack' }, ...groups.map((g) => h('details', { class: 'group', open: openAll, 'data-group': g.key },
+      ? h('div', { class: 'stack' }, ...groups.map((g) => h('details', { class: 'group', open: openAll, 'data-group': g.key, 'data-keep-key': `group:${g.key}` },
         h('summary', { class: 'group-summary' }, h('span', { class: 'text-body' }, g.label), h('span', { class: 'text-meta' }, `${g.count} atom · ${g.questions} soru`)),
         h('div', { class: 'stack group-body' }, ...g.subs.flatMap((s) => [
           s.label ? h('p', { class: 'group-sub', 'data-sub': s.label }, s.label) : null,
@@ -183,14 +207,18 @@ async function renderAtom(ctx: AppContext, atomId: string): Promise<HTMLElement>
   const hookTypeIn = h('select', { class: 'input', 'aria-label': 'Çengel türü' }, HOOK_TYPES.map((t) => h('option', { value: t }, `${HOOK_TYPE_LABEL[t]} — ${HOOK_TYPE_HINT[t]}`))) as HTMLSelectElement
   hookTypeIn.value = 'mnemonic'
   const hookIn = textarea({ placeholder: 'Kendi kodlaman / hatırlatıcın', 'aria-label': 'Çengel metni', rows: 2, 'data-testid': 'hook-text' })
+  let savingHook = false
   const saveHook = async () => {
     const content = hookIn.value.trim()
+    if (savingHook) return // çift dokunuş aynı çengeli iki kez yazmasın (silme yolu yok)
     if (!content) { ctx.notice('Çengel metni boş olamaz.', 'error'); return ctx.render() }
+    savingHook = true
     try {
       const added = await ctx.motor.addHook(atom.id, { type: hookTypeIn.value as HookType, content })
       ctx.notice(added ? 'Çengel eklendi.' : 'Bu çengel zaten var.', added ? 'ok' : 'info')
       await ctx.navigate({ name: 'content', view: { kind: 'atom', atomId } })
     } catch (e) {
+      savingHook = false
       ctx.notice((e as Error).message, 'error')
       await ctx.render()
     }
@@ -205,7 +233,7 @@ async function renderAtom(ctx: AppContext, atomId: string): Promise<HTMLElement>
     atom.why ? h('p', { class: 'text-body' }, `Neden: ${atom.why}`) : null,
     atom.how ? h('p', { class: 'text-body' }, `Nasıl: ${atom.how}`) : null,
     hooks.length ? h('div', { class: 'stack' }, hooks.map((hk) => h('div', { class: 'hook' }, h('span', { class: 'hook-type' }, hookTypeLabel(hk.type)), h('p', { class: 'text-body' }, hk.content)))) : null,
-    h('details', { class: 'card' }, h('summary', { class: 'text-support' }, hooks.length ? 'Çengel ekle' : 'Çengel ekle (kendi kodlaman)'),
+    h('details', { class: 'card', 'data-keep-key': `hook-form:${atomId}` }, h('summary', { class: 'text-support' }, hooks.length ? 'Çengel ekle' : 'Çengel ekle (kendi kodlaman)'),
       h('div', { class: 'stack' }, field('Tür', hookTypeIn), field('Çengel', hookIn, 'Cevabı yazma, cevabı çağrıştır'), button('Çengeli kaydet', () => void saveHook(), { testid: 'save-hook' }))),
     h('h2', { class: 'text-section' }, `Sorular (${questions.length})`),
     questions.length

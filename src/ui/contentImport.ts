@@ -95,7 +95,9 @@ const canReadClipboard = () => typeof navigator.clipboard?.readText === 'functio
 export async function renderContentImport(ctx: AppContext, services: BackupServices | undefined, state: ImportUiState): Promise<HTMLElement> {
   const textIn = textarea({ placeholder: "JSON'u buraya yapıştır", 'aria-label': 'İçe aktarılacak JSON', rows: 8, 'data-testid': 'import-text' })
   textIn.value = state.text
-  textIn.addEventListener('input', () => { state.text = textIn.value; state.plan = null })
+  // metin/ünite değişince eski önizleme geçersizdir: durumu boşaltmak yetmez, "Ekle" düğmesi de kilitlenmeli → tek seferlik yeniden çizim
+  const invalidatePlan = () => { if (state.plan) { state.plan = null; void ctx.render() } }
+  textIn.addEventListener('input', () => { state.text = textIn.value; invalidatePlan() })
 
   const notesIn = textarea({ placeholder: 'Ders notunu buraya yapıştır (isteğe bağlı)', 'aria-label': 'Ders notu', rows: 4, 'data-testid': 'import-notes' })
   notesIn.value = state.notes
@@ -103,7 +105,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
 
   const unitIn = input({ placeholder: 'İsteğe bağlı — örn. 18. yy Osmanlı', 'aria-label': 'Ünite', autocomplete: 'off', 'data-testid': 'import-unit' })
   unitIn.value = state.unit
-  unitIn.addEventListener('input', () => { state.unit = unitIn.value })
+  unitIn.addEventListener('input', () => { state.unit = unitIn.value; invalidatePlan() })
 
   const buildPlan = async (): Promise<ImportPlan> => applyUnitToPlan(planContentImport(parseContentImport(state.text), await existingContent(ctx)), state.unit)
 
@@ -168,6 +170,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
       await ctx.navigate({ name: 'content', view: { kind: 'list' } })
     } catch (e) {
       state.error = (e as Error).message
+      state.busy = false // render'dan ÖNCE: sonra bırakılırsa "Ekle" kalıcı kilitli kalır
       await ctx.render()
     } finally {
       state.busy = false
@@ -186,7 +189,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
       button('Şablonu kopyala', () => void copyTemplate(), { class: 'btn-inline', testid: 'copy-template' }),
     ),
     field('Ders notun (isteğe bağlı)', notesIn, 'Buraya yapıştırırsan şablonla birlikte tek parça gider; sohbette ikinci yapıştırma gerekmez.'),
-    h('details', {}, h('summary', { class: 'text-support' }, 'Şablonu göster'), h('pre', { class: 'import-template', 'data-testid': 'import-template' }, IMPORT_PROMPT_TEMPLATE)),
+    h('details', { 'data-keep-key': 'import-template' }, h('summary', { class: 'text-support' }, 'Şablonu göster'), h('pre', { class: 'import-template', 'data-testid': 'import-template' }, IMPORT_PROMPT_TEMPLATE)),
     h('div', { class: 'row' },
       canReadClipboard() ? button('Panodan yapıştır', () => void pasteFromClipboard(), { variant: 'secondary', class: 'btn-inline', testid: 'paste-import' }) : null,
       services?.files ? button('Dosya seç', () => void pickFile(), { class: 'btn-inline', testid: 'pick-import' }) : null,

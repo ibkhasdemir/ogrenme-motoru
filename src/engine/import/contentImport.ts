@@ -157,14 +157,42 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
  * Önce olduğu gibi denenir; olmazsa çit ve çevre metin atılır (ilk `{` … son `}`), yine olmazsa akıllı tırnaklar düz tırnağa çevrilir.
  * Başarılıysa ayrıştırılmış değer, değilse ilk hata mesajı döner. Veri "düzeltilmez"; yalnız sarmalayıcı temizlenir.
  */
+/** İlk `{`'ten başlayıp süslü parantezleri (string ve kaçış farkındalığıyla) dengeleyen ilk tam nesneyi keser. */
+function sliceBalancedObject(text: string): string | null {
+  const start = text.indexOf('{')
+  if (start < 0) return null
+  let depth = 0
+  let inStr = false
+  let esc = false
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]!
+    if (inStr) {
+      if (esc) esc = false
+      else if (ch === '\\') esc = true
+      else if (ch === '"') inStr = false
+      continue
+    }
+    if (ch === '"') inStr = true
+    else if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) return text.slice(start, i + 1)
+    }
+  }
+  return null
+}
+
 export function parseLooseJson(text: string): { value: unknown } | { error: string } {
   const attempts: string[] = []
   const raw = text.replace(/^﻿/, '')
   attempts.push(raw)
-  const unfenced = raw.replace(/```[a-zA-Z]*\s*/g, '').replace(/```/g, '')
+  // yalnız kendi satırında duran çit atılır; metin İÇİNDEKİ ``` dizisi korunur (veri değiştirilmez)
+  const unfenced = raw.replace(/^[ \t]*```[a-zA-Z]*[ \t]*$/gm, '')
   const first = unfenced.indexOf('{')
   const last = unfenced.lastIndexOf('}')
   if (first >= 0 && last > first) attempts.push(unfenced.slice(first, last + 1))
+  const balanced = sliceBalancedObject(unfenced) // JSON'dan sonra "… :}" gibi bir açıklama varsa
+  if (balanced) attempts.push(balanced)
   const squoted = attempts[attempts.length - 1]!.replace(/[“”„«»]/g, '"').replace(/[‘’]/g, "'")
   attempts.push(squoted)
   let firstError = ''
@@ -325,10 +353,18 @@ export function planContentImport(parsed: ParsedContent, existing: ExistingConte
   for (const a of existing.atoms) if (!a.archived) targets.set(normText(a.text), { kind: 'existing', atomId: a.id })
 
   const atoms: ImportAtom[] = []
+  const carriedHooks: ImportHook[] = [] // atlanan (zaten var olan) atomun satır içi çengelleri kaybolmaz; mevcut atoma bağlanır
   let skippedAtoms = 0
   for (const a of parsed.atoms) {
     const key = normText(a.text)
-    if (targets.has(key)) { skippedAtoms++; continue }
+    const existingTarget = targets.get(key)
+    if (existingTarget) {
+      skippedAtoms++
+      if (existingTarget.kind === 'existing') {
+        for (const hk of a.hooks) carriedHooks.push({ atomId: existingTarget.atomId, atomText: null, type: hk.type, content: hk.content, path: `atomlar["${a.text}"].cengel` })
+      }
+      continue
+    }
     targets.set(key, { kind: 'new', index: atoms.length })
     atoms.push({ ...a, hooks: [...a.hooks] })
   }
@@ -361,7 +397,7 @@ export function planContentImport(parsed: ParsedContent, existing: ExistingConte
   const seenH = new Set<string>()
   const hooks: PlannedHook[] = []
   let skippedHooks = 0
-  for (const hk of parsed.hooks) {
+  for (const hk of [...carriedHooks, ...parsed.hooks]) {
     const target = resolveTarget(hk.atomText, hk.atomId, hk.path, 'çengel')
     if (!target) continue
     if (target.kind === 'new') {
@@ -392,9 +428,10 @@ export function applyUnitToPlan(plan: ImportPlan, unit: string): ImportPlan {
 /** Ünite uyarısı (engellemez): konu başına ortalama atom azsa dizin parçalanmış demektir. */
 export function unitWarning(plan: ImportPlan): string | null {
   if (plan.atoms.length < 8) return null
-  const topics = new Set(plan.atoms.map((a) => normText(a.topicName)))
-  if (topics.size < 6 || plan.atoms.length / topics.size >= 3) return null
-  return `${plan.atoms.length} atom ${topics.size} ayrı konuya dağılmış. Bunlar tek bir ünitenin alt başlıklarıysa yukarıya ünite adını yaz (örn. "18. yy Osmanlı"); liste o zaman ünite altında toplanır.`
+  // ünite (konu adının " › " öncesi) sayılır: 1 ünite + çok alt başlık ideal dizindir, uyarılmaz
+  const units = new Set(plan.atoms.map((a) => normText(splitTopicPath(a.topicName).unit)))
+  if (units.size < 6 || plan.atoms.length / units.size >= 3) return null
+  return `${plan.atoms.length} atom ${units.size} ayrı üniteye dağılmış. Bunlar tek bir ünitenin alt başlıklarıysa yukarıya ünite adını yaz (örn. "18. yy Osmanlı"); liste o zaman ünite altında toplanır.`
 }
 
 /** Ekranda özet cümlesi (tek yerde üretilir; test edilir). Yeni atomların kendi çengelleri atom sayısına dâhildir. */
