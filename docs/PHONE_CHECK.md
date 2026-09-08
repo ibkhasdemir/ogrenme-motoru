@@ -73,4 +73,8 @@ Yama (Motor): aynı depoda sequence geri gitmez; gerileme veya "olay varken atom
 
 **F-2 — Ana ekran uygulamasında güncelleme çubuğu çıkmadı.** Safari sekmesinde çıktı; ana ekran uygulaması eski sürümde kaldı. Neden: iOS ana ekran uygulaması sayfayı yeniden yüklemeden sürdürür; güncelleme denetimi yalnız açılışta yapılıyordu. Yama: uygulama öne gelince (`visibilitychange`) `registration.update()` (en az 60 s arayla, çevrimdışı sessiz). Test: phase11 "Güncelleme denetimi". Telefonda yeniden denenmeli (M-UP-01 tekrar).
 
+**F-4 — İçe aktarmada metin yapıştırma "çalışmadı", dosya çalıştı (114 öğe).** Neden: yapay zekâ çıktısı ```json çiti ve açıklama cümlesiyle geliyor; sıkı `JSON.parse` reddediyordu. Yama: `parseLooseJson` (çit/çevre metin/BOM/akıllı tırnak sarmalayıcısı temizlenir; veri değiştirilmez), "Panodan yapıştır" düğmesi, anlaşılır hata. Test: phase13b. **Not (hata değil):** içe aktarma sonrası Bugün "9 yeni" = günlük yeni tavanı 10 − o gün yapılmış 1 (`03` §7, Veri → Günlük yeni ile değiştirilebilir).
+
+**F-5 — CI kararsızlığı (2026-09-08, run #6).** `phase10c-ui` E-11 geri yükleme akışı sabit 12–16 makro-görev tik'i bekliyordu; Linux koşucusunda WebCrypto + fake-indexeddb daha çok tik istedi → `restore-done` null. Yama: koşul bekleme (`waitFor`, 5 s). Ürün kodu değişmedi.
+
 **F-3 — iPhone depo ayrımı (davranış, hata değil).** Safari sekmesi ile ana ekran uygulaması **ayrı** veri ve ayrı service worker tutar; birinde Yenile'ye basmak diğerini güncellemez. İkonu silip yeniden eklemek **yeni, boş bir uygulama** oluşturur; eski ikonun verisi onunla gider. Kural: tek ikon kullan, ikonu silmeden önce dış yedek al; güncelleme uygulamanın içinde gelir, ikon yeniden eklenmez. README'ye yazıldı.
