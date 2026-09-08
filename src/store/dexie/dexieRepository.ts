@@ -10,6 +10,7 @@ import {
   ContentRuleError, planNewQuestion, planRevision, validateOptionAtoms,
   type NewQuestionInput, type QuestionPatch, type ReviseOutcome,
 } from '../../engine/question/plan'
+import type { ContentErrorRequest } from '../../engine/question/contentError'
 import type { IdGenerator } from '../../platform/services'
 import { defaultConfig, defaultMeta, type RepositoryTestHooks } from '../memory/memoryRepository'
 import {
@@ -127,14 +128,22 @@ export class DexieRepository implements Repository {
     })
   }
 
-  /** 06 §5 "Soru semantik düzenleme": tek rw transaction; hiçbir anda Question.primaryAtomId ≠ QuestionAtom(primary) kalmaz. */
-  reviseQuestion(questionId: string, patch: QuestionPatch, now: string): Promise<ReviseOutcome> {
-    return this.db.transaction('rw', [this.db.atoms, this.db.questions, this.db.questionRevisions, this.db.questionAtoms, this.db.optionAtoms], async () => {
+  /**
+   * 06 §5 "Soru semantik düzenleme": tek rw transaction; hiçbir anda Question.primaryAtomId ≠ QuestionAtom(primary) kalmaz.
+   * "Cevap anahtarı hata düzeltmesi" (K01): revision ve content_error void'leri birlikte yazılır; yarım kalırsa hiçbiri.
+   */
+  reviseQuestion(questionId: string, patch: QuestionPatch, now: string, contentError?: ContentErrorRequest): Promise<ReviseOutcome> {
+    return this.db.transaction('rw', [this.db.atoms, this.db.questions, this.db.questionRevisions, this.db.questionAtoms, this.db.optionAtoms, this.db.attempts, this.db.voids, this.db.meta], async () => {
       const question = await this.db.questions.get(questionId)
       if (!question) throw new NotFoundError(`Question ${questionId}`)
       const current = await this.db.questionRevisions.get([questionId, question.currentVersion])
       if (!current || !isCompleteRevision(current)) throw new ContentRuleError('Güncel sürüm düzenlenebilir bir içerik taşımıyor')
       if (patch.primaryAtomId && !(await this.db.atoms.get(patch.primaryAtomId))) throw new NotFoundError(`Atom ${patch.primaryAtomId}`)
+      const voidTargets = contentError?.attemptIds ?? []
+      for (const id of voidTargets) {
+        if (!(await this.db.attempts.get(id))) throw new UnknownAttemptError(id)
+        if (await this.db.voids.where('targetAttemptId').equals(id).first()) throw new AlreadyVoidedError(id)
+      }
       const qas = await this.db.questionAtoms.where('questionId').equals(questionId).toArray()
       const oas = await this.db.optionAtoms.where('questionId').equals(questionId).toArray()
       const plan = planRevision(
@@ -154,6 +163,10 @@ export class DexieRepository implements Repository {
       ])
       await this.db.optionAtoms.where('questionId').equals(questionId).delete()
       if (plan.keepOptionAtoms.length) await this.db.optionAtoms.bulkAdd(plan.keepOptionAtoms)
+      for (const targetAttemptId of voidTargets) {
+        const n = await this.bumpSequence()
+        await this.db.voids.add({ id: this.ids.newId(), targetAttemptId, sequence: n, timestamp: now, reason: 'content_error', note: contentError!.note })
+      }
       return { question: plan.question, revision: plan.newRevision, created: true, contextChanged: plan.contextChanged }
     })
   }

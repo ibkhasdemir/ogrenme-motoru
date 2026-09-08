@@ -6,6 +6,7 @@ import type {
 } from '../domain'
 import type { BackupConfigSection, BackupSnapshot } from '../engine/backup/types'
 import type { NewQuestionInput, QuestionPatch, ReviseOutcome } from '../engine/question/plan'
+import type { ContentErrorRequest } from '../engine/question/contentError'
 
 /** Kurulu uygulamanın fiziksel şeması (06 §6). */
 export const SCHEMA_VERSION = 2
@@ -124,8 +125,11 @@ export interface Repository {
   archiveQuestion(id: string): Promise<void>
   /** 06 §5 "Soru oluşturma": questions + revision v1 + questionAtoms(primary) tek transaction. */
   createQuestion(input: NewQuestionInput): Promise<ReviseOutcome>
-  /** 06 §5 "Soru semantik düzenleme": tek transaction; semantik fark yoksa sürüm üretmez. */
-  reviseQuestion(questionId: string, patch: QuestionPatch, now: string): Promise<ReviseOutcome>
+  /**
+   * 06 §5 "Soru semantik düzenleme": tek transaction; semantik fark yoksa sürüm üretmez.
+   * `contentError` (K01, 01 §4.6): seçilen Attempt'lar için `AttemptVoid { reason: content_error }` AYNI transaction'da yazılır.
+   */
+  reviseQuestion(questionId: string, patch: QuestionPatch, now: string, contentError?: ContentErrorRequest): Promise<ReviseOutcome>
   listRevisions(questionId: string): Promise<QuestionRevision[]>
   getRevision(questionId: string, version: number): Promise<QuestionRevision | undefined>
   /** yalnız ekler; aynı (questionId, version) ikinci kez → DuplicateRevisionError. */
