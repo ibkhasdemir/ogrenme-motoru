@@ -196,3 +196,38 @@ describe('Şablon + not tek parça (telefonda iki kopyala-yapıştır yerine bir
     }
   })
 })
+
+describe('Atom ekranından çengel ekleme (kendi kodlaman)', () => {
+  it('tür + metin → kaydet; listede görünür; aynı metin ikinci kez "zaten var"', async () => {
+    const flush = async (n = 14) => { for (let i = 0; i < n; i++) await new Promise((r) => setTimeout(r, 0)) }
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const repo = new MemoryRepository(fakeIds('gen'))
+    const motor = await Motor.create({ repo, clock: new FakeClock(), ids: fakeIds('id') })
+    const atom = await motor.addAtom({ subjectName: 'Tarih', topicName: '18. yy Osmanlı › Islahatlar', text: 'Lale Devri 1718.', prompt: 'Lale Devri hangi yıl?' })
+    const handle = mountApp(root, { motor, appVersion: '0.2.0' })
+    try {
+      await flush()
+      const go = (label: string) => [...document.querySelectorAll<HTMLElement>('button')].find((b) => (b.textContent ?? '').trim() === label)!
+      go('İçerik').click(); await flush()
+      document.querySelector<HTMLDetailsElement>('details[data-group]')!.open = true
+      document.querySelector<HTMLElement>(`[data-atom="${atom.id}"]`)!.click(); await flush()
+      const hookText = document.querySelector<HTMLTextAreaElement>('[data-testid="hook-text"]')!
+      const sel = document.querySelector<HTMLSelectElement>('select')!
+      expect(sel.value).toBe('mnemonic') // varsayılan tür kodlama
+      hookText.value = 'Pasarofça → Lale açtı'
+      document.querySelector<HTMLElement>('[data-testid="save-hook"]')!.click(); await flush()
+      expect((await motor.content()).hooks).toMatchObject([{ atomId: atom.id, type: 'mnemonic', content: 'Pasarofça → Lale açtı' }])
+      expect(document.body.textContent).toContain('Çengel eklendi.')
+      expect(document.querySelector('.hook-type')!.textContent).toBe('Kodlama')
+      const again = document.querySelector<HTMLTextAreaElement>('[data-testid="hook-text"]')!
+      again.value = '  pasarofça → lale açtı '
+      document.querySelector<HTMLElement>('[data-testid="save-hook"]')!.click(); await flush()
+      expect(document.body.textContent).toContain('Bu çengel zaten var.')
+      expect((await motor.content()).hooks).toHaveLength(1)
+    } finally {
+      handle.destroy()
+      document.body.replaceChildren()
+    }
+  })
+})

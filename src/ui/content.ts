@@ -1,12 +1,12 @@
 // 07 S11 İçerik (minimal): Ders › Konu › Atom listesi; atom aç (arşivle, soru yüzü tamamla); soru aç (Düzenle → yeni sürüm, K01,
 // Sürüm geçmişi). Öğrenme modu: doğru seçenek burada görünebilir (14 §10).
-import type { Atom, CompleteQuestionRevision, Question, QuestionRevision } from '../domain'
-import { isCompleteRevision } from '../domain'
+import type { Atom, CompleteQuestionRevision, HookType, Question, QuestionRevision } from '../domain'
+import { HOOK_TYPES, isCompleteRevision } from '../domain'
 import { affectedAttemptsByKeyChange } from '../engine/question/contentError'
 import { joinTopicPath, splitTopicPath } from '../engine/import/contentImport'
 import type { AppContext } from './app'
 import { button, field, formatDateTimeTr, h, input, textarea } from './dom'
-import { hookTypeLabel } from './labels'
+import { HOOK_TYPE_HINT, HOOK_TYPE_LABEL, hookTypeLabel } from './labels'
 
 export type ContentView =
   | { kind: 'list'; query?: string }
@@ -179,6 +179,22 @@ async function renderAtom(ctx: AppContext, atomId: string): Promise<HTMLElement>
     ctx.notice('Soru yüzü kaydedildi; atom artık çalışılabilir.', 'ok')
     await ctx.navigate({ name: 'content', view: { kind: 'atom', atomId } })
   }
+  // Kendi kodlamanı sonradan ekleme (BL-39): içe aktarmanın "cengeller" bölümünün ekran karşılığı
+  const hookTypeIn = h('select', { class: 'input', 'aria-label': 'Çengel türü' }, HOOK_TYPES.map((t) => h('option', { value: t }, `${HOOK_TYPE_LABEL[t]} — ${HOOK_TYPE_HINT[t]}`))) as HTMLSelectElement
+  hookTypeIn.value = 'mnemonic'
+  const hookIn = textarea({ placeholder: 'Kendi kodlaman / hatırlatıcın', 'aria-label': 'Çengel metni', rows: 2, 'data-testid': 'hook-text' })
+  const saveHook = async () => {
+    const content = hookIn.value.trim()
+    if (!content) { ctx.notice('Çengel metni boş olamaz.', 'error'); return ctx.render() }
+    try {
+      const added = await ctx.motor.addHook(atom.id, { type: hookTypeIn.value as HookType, content })
+      ctx.notice(added ? 'Çengel eklendi.' : 'Bu çengel zaten var.', added ? 'ok' : 'info')
+      await ctx.navigate({ name: 'content', view: { kind: 'atom', atomId } })
+    } catch (e) {
+      ctx.notice((e as Error).message, 'error')
+      await ctx.render()
+    }
+  }
   return h('div', { class: 'screen', 'data-screen': 'content-atom' },
     back(ctx),
     h('p', { class: 'text-question' }, atom.text),
@@ -189,6 +205,8 @@ async function renderAtom(ctx: AppContext, atomId: string): Promise<HTMLElement>
     atom.why ? h('p', { class: 'text-body' }, `Neden: ${atom.why}`) : null,
     atom.how ? h('p', { class: 'text-body' }, `Nasıl: ${atom.how}`) : null,
     hooks.length ? h('div', { class: 'stack' }, hooks.map((hk) => h('div', { class: 'hook' }, h('span', { class: 'hook-type' }, hookTypeLabel(hk.type)), h('p', { class: 'text-body' }, hk.content)))) : null,
+    h('details', { class: 'card' }, h('summary', { class: 'text-support' }, hooks.length ? 'Çengel ekle' : 'Çengel ekle (kendi kodlaman)'),
+      h('div', { class: 'stack' }, field('Tür', hookTypeIn), field('Çengel', hookIn, 'Cevabı yazma, cevabı çağrıştır'), button('Çengeli kaydet', () => void saveHook(), { testid: 'save-hook' }))),
     h('h2', { class: 'text-section' }, `Sorular (${questions.length})`),
     questions.length
       ? h('div', { class: 'stack' }, questions.map((q) => h('button', { type: 'button', class: 'list-item', 'data-question': q.id, onClick: () => void ctx.navigate({ name: 'content', view: { kind: 'question', questionId: q.id } }) }, h('span', {}, `Soru · v${q.currentVersion}${q.archived ? ' · arşivli' : ''}`), h('span', { class: 'source' }, q.source))))
