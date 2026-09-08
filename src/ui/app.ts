@@ -9,6 +9,7 @@ import { renderContent, type ContentView } from './content'
 import { renderData } from './data'
 import { currentReminder, reminderLine, type BackupSectionState, type BackupServices } from './dataBackup'
 import { hookTypeLabel } from './labels'
+import { renderContentImport, type ImportUiState } from './contentImport'
 import { restoreDeps, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { emergencyRollback } from '../app/restore'
 import type { UpdateController } from '../pwa/register'
@@ -22,6 +23,7 @@ export type Screen =
   | { name: 'atomForm' }
   | { name: 'questionForm'; presetAtomId?: string }
   | { name: 'content'; view: ContentView }
+  | { name: 'import' }
   | { name: 'data' }
   | { name: 'lockdown'; reason: string; jobId: string | null }
 
@@ -73,6 +75,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   let noticeState: { text: string; kind: 'ok' | 'error' | 'info' } | null = null
   let renderSeq = 0
   const backupState: BackupSectionState = { pendingConfirm: null, lastMessage: null }
+  const importState: ImportUiState = { text: '', plan: null, error: null, busy: false }
 
   const ctx: AppContext = {
     motor,
@@ -180,6 +183,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       case 'atomForm': return renderAtomForm(ctx)
       case 'questionForm': return renderQuestionForm(ctx, screen.presetAtomId)
       case 'content': return renderContent(ctx, screen.view)
+      case 'import': return renderContentImport(ctx, deps.services, importState)
       case 'data': return renderData(ctx, { services: deps.services, backupState, restoreState })
       case 'lockdown': return renderLockdown(screen)
     }

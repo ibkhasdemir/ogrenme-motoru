@@ -68,6 +68,13 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Alternatif: `maximumInterval: 364` (`configVersion += 1`, REBUILD; `02` §4 düzeltmesi gerekir).
 - Durum: **KARAR BEKLİYOR** — varsayılan uygulandı (kullanıcı onayı 2026-09-08: "varsayılanla ilerle").
 
+### BL-38 — İçerik içe aktarma (spec dışı özellik; sahibi kararıyla eklendi)
+- Bölüm: `10` §1 (LLM/soru üretimi non-goal; içe aktarma listede yok), `10` §3 (01–08'de tanımlı değilse uydurulmaz), `00` A21 ve `06` §5/§9 ("içe aktarma" yıkıcı işlem sınıfında adı geçer; `pre_import` kurtarma noktası tanımlı, akış/biçim tanımsız).
+- Gözlem (2026-09-08, telefon kullanımı): içeriği formdan tek tek girmek kullanılabilirliği düşürüyor; kullanıcı "elle doldurmayacağım, çözüm bulalım" dedi ve içe aktarma özelliğini onayladı ("evet ya çok iyi olur").
+- Karar (sahibi): **eklendi** — Phase 13. Sınırlar: uygulamada LLM/API yok (JSON dışarıda üretilir; şablon uygulamada, `IMPORT_PROMPT_TEMPLATE`); yalnız ekler (mevcut içerik/öğrenme geçmişi değişmez; birleştirme/senkron değildir); formla aynı kurallar (`Motor.addAtom`/`addQuestion`); hatalı öğe varsa hiçbir şey eklenmez (atomik plan); kurtarma deposu bağlıysa önce `pre_import` noktası (`06` §9 retention işlem sınıfı). Biçim `ogrenme-motoru-icerik/1` (Türkçe anahtarlar; `dogru` seçenek metni, sayı reddedilir). Modüller: `src/engine/import/contentImport.ts` (saf), `src/app/contentImport.ts`, `src/ui/contentImport.ts`; testler `tests/phase13-content-import.test.ts`.
+- Bilinen sınır: uygulama sırasında tek transaction yok; ön doğrulama sonrası ekleme sıralıdır (yarıda kesilirse eklenenler kalır, eksikler ikinci denemede "zaten var" ile atlanır).
+- Durum: **KAPANDI** (sahibi kararı 2026-09-08). Spec'e (`07`) sonraki revizyonda S11b olarak işlenmesi önerilir; `docs/spec` bu depoda düzenlenmez.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

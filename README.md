@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 242 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 251 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -51,6 +51,35 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 - **Tüm veriyi sıfırla**: iki onay; öncesinde kurtarma noktası.
 - Eski sürümle alınmış yedekler (format 1) okunur ve bellekte güncel formata çevrilir; eski soru sürümlerinin metni yoksa "eski veri modelinde saklanmadığı için mevcut değil" olarak işaretlenir, uydurulmaz.
 - Farklı bir zamanlayıcı sürümüyle alınan yedek: ham geçmiş ve içerik olduğu gibi yüklenir, hafıza durumu kurulu motorla yeniden hesaplanır (uyarı gösterilir).
+
+## İçerik içe aktarma (İçerik → İçe aktar)
+
+Atom ve soruları tek tek yazmak yerine JSON olarak ekle (BL-38; spec dışı, sahibi kararıyla eklendi). Uygulamanın içinde yapay zekâ yoktur: JSON'u dışarıda üretirsin (bir yapay zekâ sohbeti, tablo ya da elle), uygulamaya yapıştırırsın.
+
+1. İçerik → **İçe aktar** → **Şablonu kopyala**. Şablon, bir yapay zekâ sohbetine yapıştırılacak hazır istektir; sonuna notlarını ekle.
+2. Çıkan JSON'u **kutuya yapıştır** (ya da `.json` dosyası seç) → **Önizle** → "N atom, M soru eklenecek" → **Ekle**.
+3. Yalnız ekler: mevcut içerik ve öğrenme geçmişi değişmez. Aynı metinli atom varsa yeniden eklenmez, sorular ona bağlanır. Tek bir hatalı öğe varsa hiçbir şey eklenmez; hata listesi hangi öğe olduğunu söyler. Kurtarma deposu bağlıysa önce `pre_import` kurtarma noktası alınır.
+
+Biçim (`ogrenme-motoru-icerik/1`):
+
+```json
+{
+  "format": "ogrenme-motoru-icerik/1",
+  "atomlar": [
+    { "ders": "Tarih", "konu": "Tanzimat Dönemi", "atom": "Tanzimat Fermanı 1839'da ilan edildi.", "soru": "Tanzimat Fermanı hangi yıl ilan edildi?",
+      "tur": ["tarih"], "neden": "isteğe bağlı", "cengel": [{ "tur": "kodlama", "metin": "18-39: on sekiz otuz dokuz" }] }
+  ],
+  "sorular": [
+    { "atom": "Tanzimat Fermanı 1839'da ilan edildi.", "soru": "Tanzimat Fermanı hangi yıl ilan edildi?",
+      "secenekler": ["1839", "1856", "1876"], "dogru": "1839", "kaynak": "ders notu" }
+  ]
+}
+```
+
+- `tur` (isteğe bağlı): olgu, tarih, kronoloji, tanım, sebep-sonuç, süreç, karşılaştırma, mekân, kural, istisna (İngilizce enum da kabul edilir).
+- `cengel.tur`: mantık, kodlama, absürt, benzetme, hikâye, görsel, uyarı, kişisel.
+- `dogru` doğru seçeneğin **metnidir**, sayı kabul edilmez (0/1 tabanı karışıklığı yanlış cevabı doğru işaretlerdi). `kaynak` zorunlu.
+- Sorunun `atom` alanı, dosyadaki bir atomun ya da mevcut bir atomun metniyle birebir aynı olmalı (`atomId` de kullanılabilir).
 
 ## Mimari (özet)
 

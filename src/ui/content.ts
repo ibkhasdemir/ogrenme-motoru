@@ -56,6 +56,7 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
   }
   return h('div', { class: 'screen', 'data-screen': 'content' },
     h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik')),
+    h('div', { class: 'row' }, button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' })),
     search,
     missingPrompt.length ? h('div', { class: 'stack' }, h('p', { class: 'text-support' }, 'Soru yüzü eksik olan atomlar çalışılmaz; tamamlayınca kuyruğa girer.'), missingPrompt.map((a) => row(a, 'soru yüzü eksik'))) : null,
     rest.length ? h('div', { class: 'stack' }, rest.map((a) => row(a))) : (!missingPrompt.length ? h('p', { class: 'text-support' }, 'Henüz atom yok.') : null),
