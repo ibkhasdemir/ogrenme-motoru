@@ -23,7 +23,7 @@ export type Screen =
   | { name: 'recall'; pres: Extract<Presentation, { kind: 'recall' }>; phase: 'prompt' | 'revealed'; hookShown: boolean; shownAtMono: number; revealAtMono: number | null }
   | { name: 'end'; reason: 'budget' | 'empty'; dueSoon: number; sessionCount: number }
   | { name: 'atomForm' }
-  | { name: 'questionForm'; presetAtomId?: string }
+  | { name: 'questionForm'; presetAtomId?: string; presetText?: string }
   | { name: 'content'; view: ContentView }
   | { name: 'import' }
   | { name: 'capture' }
@@ -233,7 +233,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       case 'recall': return renderRecall(screen)
       case 'end': return renderEnd(screen)
       case 'atomForm': return renderAtomForm(ctx)
-      case 'questionForm': return renderQuestionForm(ctx, screen.presetAtomId)
+      case 'questionForm': return renderQuestionForm(ctx, screen.presetAtomId, screen.presetText)
       case 'content': return renderContent(ctx, screen.view)
       case 'import': return renderContentImport(ctx, deps.services, importState)
       case 'capture': return renderCapture(ctx, captureState)

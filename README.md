@@ -11,7 +11,7 @@ Gereksinim: Node.js ≥ 20 (geliştirme sırasında Node 24 LTS kullanıldı).
 
 ```bash
 npm install
-npm test          # 303 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
+npm test          # 304 otomatik test (birim, entegrasyon, jsdom uçtan uca, statik taramalar)
 npm run build     # tsc --noEmit + vite build → dist/ (service worker manifesti build sırasında enjekte edilir)
 npm run dev       # geliştirme sunucusu (service worker yok; PWA davranışı için build + preview)
 npm run preview   # dist/'i yerel sunar (127.0.0.1)
@@ -76,6 +76,7 @@ Veri bir dosyadır; senkron yok, birleştirme yok, geri yükleme tam değiştirm
 - Aynı kutu öğesi ikinci kez kayıt üretemez; kayıt kimliği o öğeden türetilir. Kaydetme yarıda kalırsa (uygulama kapanırsa) ikinci deneme aynı kaydı tamamlar, ikinci bir başarısızlık yazmaz.
 - Ölçüm yazılmayan yakalama, atomu kendi konusunda sıranın başına alır: bugün öğrenmek istediğin şey sıranın sonunda beklemez.
 - Köken bilgisi atoma işlenir: aylar sonra "bunu şu denemede yemiştim" izini korur.
+- İşlerken **"Bunu soru olarak da ekle"** işaretlersen, kaydettikten sonra soru formu ham metin ve seçtiğin atomla açılır (05 §3.3 adım 2).
 - Kutu öğeleri olay değildir: düzenlenebilir, atılabilir (silinmez, "atıldı" olur) ve hafızaya hiç dokunmaz.
 
 ## İçerik içe aktarma (İçerik → İçe aktar)

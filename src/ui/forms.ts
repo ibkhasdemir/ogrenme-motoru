@@ -59,10 +59,11 @@ export async function renderAtomForm(ctx: AppContext): Promise<HTMLElement> {
   )
 }
 
-export async function renderQuestionForm(ctx: AppContext, presetAtomId?: string): Promise<HTMLElement> {
+export async function renderQuestionForm(ctx: AppContext, presetAtomId?: string, presetText?: string): Promise<HTMLElement> {
   const c = await ctx.motor.content()
   const atoms = ctx.motor.sortedAtoms(c.atoms.filter((a) => !a.archived), c.topics, c.subjects)
   const textIn = textarea({ placeholder: 'Soru metni' })
+  if (presetText) textIn.value = presetText // 05 §3.3 adım 2: kutudaki ham metin soru metni olarak gelir
   const optionInputs: HTMLInputElement[] = []
   const radios: HTMLInputElement[] = []
   const optionsBox = h('div', { class: 'stack' })

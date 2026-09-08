@@ -115,3 +115,21 @@ describe('Kutu ekranları', () => {
     expect(document.body.textContent).toContain('ölçüm yazılmadı')
   })
 })
+
+describe('Kutu → soru olarak ekle (05 §3.3 adım 2)', () => {
+  it('işaretlenirse kaydettikten sonra soru formu ham metinle ve atom seçili açılır', async () => {
+    const { motor, atom } = await setup()
+    await motor.captureInbox({ rawText: 'Küçük Kaynarca hangi yıl imzalandı?' })
+    await click(byTestId('to-inbox')!)
+    await click(byText('İşle'))
+    await click(document.querySelector<HTMLElement>(`[data-pick-atom="${atom.id}"]`)!)
+    const cb = byTestId('as-question') as HTMLInputElement
+    cb.checked = true
+    cb.dispatchEvent(new Event('change'))
+    await click(byTestId('save-process')!)
+    expect(screen()).toBe('question-form')
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')!.value).toBe('Küçük Kaynarca hangi yıl imzalandı?')
+    expect(document.querySelector<HTMLSelectElement>('select[aria-label="Ana atom"]')!.value).toBe(atom.id)
+    expect((await motor.listInbox()).every((i) => i.status === 'processed')).toBe(true) // kutu işi tamamlandı
+  })
+})

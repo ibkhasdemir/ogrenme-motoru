@@ -23,7 +23,7 @@ export interface CaptureUiState {
   provenance: ProvenanceType | ''
   note: string
   /** işlenen öğe ve seçilen atom (Kutu ekranı) */
-  processing: { itemId: string; atomId: string | null; query: string; reason: CaptureReason | null; sure: boolean | null; confusedWith: string | null } | null
+  processing: { itemId: string; atomId: string | null; query: string; reason: CaptureReason | null; sure: boolean | null; confusedWith: string | null; asQuestion: boolean } | null
 }
 
 export const emptyCaptureState = (): CaptureUiState => ({ text: '', provenance: '', note: '', processing: null })
@@ -97,7 +97,7 @@ function renderList(ctx: AppContext, state: CaptureUiState, items: InboxItem[]):
       h('p', { class: 'text-body' }, i.rawText),
       h('p', { class: 'text-meta' }, `${formatDateTimeTr(i.capturedAt)}${i.provenance ? ` · ${PROVENANCE_LABEL[i.provenance.type]}${i.provenance.note ? ` · ${i.provenance.note}` : ''}` : ''}`),
       h('div', { class: 'row' },
-        button('İşle', () => { state.processing = { itemId: i.id, atomId: null, query: '', reason: null, sure: null, confusedWith: null }; void ctx.render() }, { variant: 'primary', class: 'btn-inline', testid: `process-${i.id}` }),
+        button('İşle', () => { state.processing = { itemId: i.id, atomId: null, query: '', reason: null, sure: null, confusedWith: null, asQuestion: false }; void ctx.render() }, { variant: 'primary', class: 'btn-inline', testid: `process-${i.id}` }),
         button('At', async () => { await ctx.motor.discardInbox(i.id); ctx.notice('Kutudan atıldı.', 'ok'); await ctx.render() }, { variant: 'quiet', class: 'btn-inline' }),
       ),
     )),
@@ -123,6 +123,11 @@ function renderProcess(ctx: AppContext, state: CaptureUiState, item: InboxItem, 
   confusedSel.value = proc.confusedWith ?? ''
   confusedSel.addEventListener('change', () => { proc.confusedWith = confusedSel.value || null })
 
+  // 05 §3.3 adım 2: öğe bir soruysa beş zorunlu alanla Question olur; işleme bitince soru formuna ham metinle geçilir
+  const asQuestion = h('input', { type: 'checkbox', 'aria-label': 'Bunu soru olarak da ekle', 'data-testid': 'as-question' }) as HTMLInputElement
+  asQuestion.checked = proc.asQuestion
+  asQuestion.addEventListener('change', () => { proc.asQuestion = asQuestion.checked })
+
   const canSave = !!selected && (!asksReason || !!proc.reason) && !(asksReason && proc.reason === 'wrong' && proc.sure === null)
   const save = async () => {
     if (!selected) return
@@ -133,13 +138,17 @@ function renderProcess(ctx: AppContext, state: CaptureUiState, item: InboxItem, 
         ...(proc.sure === null ? {} : { sureAtFailure: proc.sure }),
         ...(proc.reason === 'confused' && proc.confusedWith ? { confusedWithAtomId: proc.confusedWith } : {}),
       })
+      const wantsQuestion = proc.asQuestion
+      const atomId = selected.id
+      const rawText = item.rawText
       state.processing = null
       const parts = ['Kutu öğesi işlendi']
       if (out.attempt) parts.push('dış başarısızlık kaydedildi, bu atom öne alındı')
       else parts.push('ölçüm yazılmadı')
       if (out.relationAdded) parts.push('karıştırma ilişkisi eklendi')
-      ctx.notice(`${parts.join(' · ')}.`, 'ok')
-      await ctx.render()
+      ctx.notice(`${parts.join(' · ')}.${wantsQuestion ? ' Şimdi soruyu tamamla.' : ''}`, 'ok')
+      if (wantsQuestion) await ctx.navigate({ name: 'questionForm', presetAtomId: atomId, presetText: rawText })
+      else await ctx.render()
     } catch (e) {
       ctx.notice((e as Error).message, 'error')
       await ctx.render()
@@ -175,6 +184,9 @@ function renderProcess(ctx: AppContext, state: CaptureUiState, item: InboxItem, 
         proc.reason === 'confused' ? field('Karıştırdığın atom', confusedSel) : null,
       )
       : null,
+    selected ? h('label', { class: 'topic-row' }, asQuestion, h('span', { class: 'stack' },
+      h('span', { class: 'text-body' }, 'Bunu soru olarak da ekle'),
+      h('span', { class: 'text-meta' }, 'kaydettikten sonra soru formu ham metinle açılır'))) : null,
     h('div', { class: 'screen-bottom' },
       button('Kaydet', () => void save(), { variant: 'primary', disabled: !canSave, testid: 'save-process' }),
       button('Vazgeç', () => { state.processing = null; void ctx.render() }, { variant: 'quiet' }),
