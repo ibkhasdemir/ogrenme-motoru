@@ -17,6 +17,7 @@ import { DexieRecoveryStore } from './store/recovery/recoveryStore'
 import { SCHEMA_VERSION, SchemaTooNewError } from './store/repository'
 import { mountApp } from './ui/app'
 import { renderRecoveryScreen } from './ui/recoveryScreen'
+import { createUpdateController, registerServiceWorker } from './pwa/register'
 
 export const APP_VERSION = '0.2.0'
 
@@ -55,10 +56,13 @@ async function boot(): Promise<void> {
     }
     await ensurePostMigrationPoint(baseDeps).catch((e) => console.warn('post_migration noktası alınamadı', e))
     const motor = await Motor.create({ repo, clock, ids, beforeWrite: () => ensureDailyPoint(baseDeps).then(() => undefined) })
+    const updates = createUpdateController()
+    void registerServiceWorker(updates) // 13 §7: arka planda; çekirdek yolu ağ beklemez
     const app = mountApp(root, {
       motor,
       appVersion: APP_VERSION,
       services: { files, hash, recovery, journal },
+      updates,
       onRecoveryDump: async () => {
         const dump = await readRecoveryDump(MAIN_DB_NAME, clock.now())
         await files.save({ name: recoveryDumpFileName(new Date().toISOString().replace(/[:.]/g, '-')), content: JSON.stringify(dump), mime: 'application/json' })

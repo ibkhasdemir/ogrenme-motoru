@@ -10,6 +10,7 @@ import { renderData } from './data'
 import { currentReminder, reminderLine, type BackupSectionState, type BackupServices } from './dataBackup'
 import { restoreDeps, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { emergencyRollback } from '../app/restore'
+import type { UpdateController } from '../pwa/register'
 
 export type Screen =
   | { name: 'today' }
@@ -30,6 +31,8 @@ export interface AppDeps {
   services?: BackupServices | RestoreServices
   /** kilit ekranında kurtarma dökümü (main.ts kurtarma okuyucusunu bağlar) */
   onRecoveryDump?: () => Promise<void>
+  /** 13 §7: bekleyen yeni sürüm → yalnız Bugün/Veri ekranında "Yeni sürüm hazır · Yenile"; Yenile yalnız bu istemciyi yeniler */
+  updates?: UpdateController
 }
 
 export interface AppContext {
@@ -149,6 +152,9 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     }
     if (seq !== renderSeq) return // araya yeni render girdi
     clear(root)
+    if (deps.updates?.pending() && (screen.name === 'today' || screen.name === 'data')) {
+      el.prepend(h('div', { class: 'notice notice-ok', role: 'status', 'data-testid': 'update-bar' }, 'Yeni sürüm hazır · ', button('Yenile', () => deps.updates!.apply(), { variant: 'quiet', class: 'btn-inline', testid: 'update-apply' })))
+    }
     if (noticeState) {
       el.prepend(h('div', { class: `notice ${noticeState.kind === 'error' ? 'notice-error' : noticeState.kind === 'ok' ? 'notice-ok' : ''}`, role: 'status' }, noticeState.text))
       noticeState = null
@@ -447,13 +453,15 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     )
   }
 
+  const unsubscribeUpdates = deps.updates?.subscribe(() => { if (screen.name === 'today' || screen.name === 'data') void render() })
+
   void render()
 
   return {
     ctx,
     getScreen: () => screen,
     render,
-    destroy() { if (undoTimer) clearTimeout(undoTimer); clear(root) },
+    destroy() { if (undoTimer) clearTimeout(undoTimer); unsubscribeUpdates?.(); clear(root) },
     setVisible(visible) { if (!session) return; if (visible) session.resume(); else session.pause() },
   }
 }
