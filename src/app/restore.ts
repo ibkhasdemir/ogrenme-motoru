@@ -15,10 +15,20 @@ import { writeRecoveryPoint, type RecoveryDeps } from './recoveryPoints'
 export interface RestoreDeps extends RecoveryDeps {
   journal: RestoreJournal
   installedConfig: SchedulerConfig
-  /** test kancaları: commit sonrası hata enjeksiyonu (B-13, B-29), doğrulama öncesi ham kaydı bozma */
+  /** test kancaları: commit sonrası hata enjeksiyonu (B-13, B-29), doğrulama öncesi ham kaydı bozma, dry-run mock (B-10), çökme (B-33) */
   hooks?: {
     afterCommit?: () => Promise<void> | void
     beforeVerify?: () => Promise<void> | void
+    dryRun?: (snapshot: BackupSnapshot) => Memory
+    /** uygulama ölümü simülasyonu: bu noktada CrashSimulation fırlatılır; geri dönüş/journal güncellemesi YAPILMAZ */
+    crashAt?: 'after_pre_point' | 'after_commit' | 'before_verify'
+  }
+}
+
+export class CrashSimulation extends Error {
+  constructor(at: string) {
+    super(`çökme simülasyonu: ${at}`)
+    this.name = 'CrashSimulation'
   }
 }
 
@@ -73,7 +83,7 @@ export async function prepareRestore(deps: RestoreDeps, source: RestoreSource): 
   const norm = normalizeSnapshot(pure, deps.installedConfig, now) // 5b
   let dryRun: Memory
   try {
-    dryRun = dryRunRebuild(norm.snapshot).memory // 6
+    dryRun = deps.hooks?.dryRun ? deps.hooks.dryRun(norm.snapshot) : dryRunRebuild(norm.snapshot).memory // 6
   } catch (e) {
     return { ok: false, errors: [`Deneme hesabı başarısız: ${(e as Error).message}`], warnings: v.warnings }
   }
@@ -147,6 +157,7 @@ export async function commitRestore(deps: RestoreDeps, prepared: PreparedRestore
     await safe(() => deps.recovery.unpinJob(jobId))
     return { ok: false, stage: 'pre_point', error: `Kurtarma noktası yazılamadı: ${(e as Error).message}`, rolledBack: false, lockdown: false, jobId }
   }
+  if (deps.hooks?.crashAt === 'after_pre_point') throw new CrashSimulation('ön noktadan sonra')
   // 11 — tek atomik transaction; meta.appliedJobId aynı transaction'da
   try {
     await deps.repo.replaceAll(prepared.normalized, {
@@ -159,7 +170,9 @@ export async function commitRestore(deps: RestoreDeps, prepared: PreparedRestore
     await safe(() => deps.recovery.unpinJob(jobId))
     return { ok: false, stage: 'commit', error: `Geri yükleme yazılamadı; mevcut verine dokunulmadı: ${(e as Error).message}`, rolledBack: false, lockdown: false, jobId }
   }
+  if (deps.hooks?.crashAt === 'after_commit') throw new CrashSimulation('commit\'ten hemen sonra') // journal hâlâ prepared, appliedJobId = jobId
   await safe(() => deps.journal.update(jobId, { phase: 'committed', updatedAt: now() })) // 12
+  if (deps.hooks?.crashAt === 'before_verify') throw new CrashSimulation('doğrulamadan önce')
   // 13–14 — REBUILD + doğrulama; hata → acil geri dönüş
   try {
     if (deps.hooks?.afterCommit) await deps.hooks.afterCommit()

@@ -8,6 +8,8 @@ import { renderAtomForm, renderQuestionForm } from './forms'
 import { renderContent, type ContentView } from './content'
 import { renderData } from './data'
 import { currentReminder, reminderLine, type BackupSectionState, type BackupServices } from './dataBackup'
+import { restoreDeps, type RestoreServices, type RestoreUiState } from './dataRestore'
+import { emergencyRollback } from '../app/restore'
 
 export type Screen =
   | { name: 'today' }
@@ -19,14 +21,15 @@ export type Screen =
   | { name: 'questionForm'; presetAtomId?: string }
   | { name: 'content'; view: ContentView }
   | { name: 'data' }
+  | { name: 'lockdown'; reason: string; jobId: string | null }
 
 export interface AppDeps {
   motor: Motor
   appVersion: string
-  /** yedek servisleri (HashService + BackupFileService); yoksa Veri ekranında yedek bölümü çıkmaz */
-  services?: BackupServices
-  /** 10c: geri yükleme / kurtarma noktaları / sıfırlama bölümleri bu kancayla eklenir */
-  dataExtras?: (ctx: AppContext) => Promise<HTMLElement[]>
+  /** yedek servisleri (HashService + BackupFileService [+ RecoveryStore + RestoreJournal]); yoksa Veri ekranında yedek bölümleri çıkmaz */
+  services?: BackupServices | RestoreServices
+  /** kilit ekranında kurtarma dökümü (main.ts kurtarma okuyucusunu bağlar) */
+  onRecoveryDump?: () => Promise<void>
 }
 
 export interface AppContext {
@@ -36,6 +39,10 @@ export interface AppContext {
   render(): Promise<void>
   notice(text: string, kind?: 'ok' | 'error' | 'info'): void
   session: Session | null
+  /** geri yükleme / sıfırlama sonrası: yeni nesil → bellek REBUILD, oturum ve bekleyen yedek teyidi geçersiz (06 §3) */
+  afterDataReplaced(): Promise<void>
+  /** 06 §8.6: acil geri dönüş de başarısız → yazma-kilitli kurtarma ekranı */
+  lockdown(reason: string, jobId: string | null): Promise<void>
 }
 
 export interface AppHandle {
@@ -70,7 +77,20 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     async navigate(s) { screen = s; await render() },
     render: () => render(),
     notice(text, kind = 'info') { noticeState = { text, kind } },
+    async afterDataReplaced() {
+      session = null
+      undoBar = null
+      backupState.pendingConfirm = null // işaretçi eski nesle aittir (BL-31)
+      backupState.lastMessage = null
+      await motor.refresh()
+    },
+    async lockdown(reason, jobId) {
+      session = null
+      screen = { name: 'lockdown', reason, jobId }
+      await render()
+    },
   }
+  const restoreState: { restore: RestoreUiState } = { restore: { step: 'idle', message: null, error: null } }
 
   function nowMono(): number { return motor.clock.monotonicMs() }
 
@@ -153,8 +173,30 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       case 'atomForm': return renderAtomForm(ctx)
       case 'questionForm': return renderQuestionForm(ctx, screen.presetAtomId)
       case 'content': return renderContent(ctx, screen.view)
-      case 'data': return renderData(ctx, { services: deps.services, backupState, extras: deps.dataExtras })
+      case 'data': return renderData(ctx, { services: deps.services, backupState, restoreState })
+      case 'lockdown': return renderLockdown(screen)
     }
+  }
+
+  /** 06 §8.6 — yazma-kilitli kurtarma ekranı: tek dokunuşla aynı noktaya dönüş + kurtarma dökümü; uygulama yeniden açılmalı. */
+  function renderLockdown(s: Extract<Screen, { name: 'lockdown' }>): HTMLElement {
+    const services = deps.services as RestoreServices | undefined
+    const retry = async () => {
+      if (!services?.journal || !services.recovery || !s.jobId) return
+      const job = await services.journal.get(s.jobId)
+      if (!job?.prePointId) { ctx.notice('Ön nokta bulunamadı; kurtarma dökümü al.', 'error'); return render() }
+      const out = await emergencyRollback(restoreDeps(ctx, services), s.jobId, job.prePointId, 'kullanıcı isteğiyle yeniden deneme')
+      if (out.ok === false && out.rolledBack) { await ctx.afterDataReplaced(); ctx.notice('Önceki durumuna dönüldü. Uygulamayı yeniden aç.', 'ok'); await ctx.navigate({ name: 'today' }) } else { ctx.notice('Dönüş yine başarısız; kurtarma dökümü al.', 'error'); await render() }
+    }
+    return h('div', { class: 'screen', 'data-screen': 'lockdown' },
+      h('h1', { class: 'text-title' }, 'Kurtarma'),
+      h('p', { class: 'text-body' }, 'Geri yükleme tamamlanamadı; verin korunmuş kurtarma noktasındadır.'),
+      h('p', { class: 'text-support' }, s.reason),
+      h('div', { class: 'screen-bottom' },
+        button('Kurtarma noktasına dön', () => void retry(), { variant: 'primary', testid: 'lockdown-retry' }),
+        deps.onRecoveryDump ? button('Kurtarma dökümü al', () => void deps.onRecoveryDump!(), { testid: 'lockdown-dump' }) : null,
+      ),
+    )
   }
 
   // --- S1 Bugün ---

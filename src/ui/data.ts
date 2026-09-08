@@ -1,14 +1,19 @@
-// 07 S12 Veri / Ayarlar — dört bölüm: Yedek al (10a) · Yedekten geri yükle (10c) · Kurtarma noktaları (10c) · Motor (Phase 9).
-// Yıkıcı yollar (geri yükleme, sıfırlama) yalnız Phase 10c kancasıyla, kurtarma noktası çekirdeği yeşilken açılır (11 kural 31).
+// 07 S12 Veri / Ayarlar — dört bölüm: Yedek al · Yedekten geri yükle · Kurtarma noktaları · Motor (+ Tüm veriyi sıfırla, iki onay).
+// Yıkıcı yollar yalnız kurtarma servisleri (RecoveryStore + RestoreJournal) bağlıyken görünür (11 kural 31).
 import { SCHEMA_VERSION } from '../store/repository'
 import type { AppContext } from './app'
 import { currentReminder, renderBackupSection, type BackupSectionState, type BackupServices } from './dataBackup'
+import { renderResetControls, renderRestoreSections, type RestoreServices, type RestoreUiState } from './dataRestore'
 import { button, field, formatDateTimeTr, h, input } from './dom'
 
 export interface DataScreenDeps {
   services?: BackupServices
   backupState: BackupSectionState
-  extras?: (ctx: AppContext) => Promise<HTMLElement[]>
+  restoreState: { restore: RestoreUiState }
+}
+
+function hasRestore(s: BackupServices | undefined): s is RestoreServices {
+  return !!s && 'recovery' in s && 'journal' in s && !!(s as RestoreServices).recovery && !!(s as RestoreServices).journal
 }
 
 export async function renderData(ctx: AppContext, d: DataScreenDeps): Promise<HTMLElement> {
@@ -27,11 +32,12 @@ export async function renderData(ctx: AppContext, d: DataScreenDeps): Promise<HT
     await ctx.render()
   }
   const backupSection = d.services ? renderBackupSection(ctx, d.services, d.backupState, await currentReminder(ctx)) : null
-  const extraSections = d.extras ? await d.extras(ctx) : []
+  const restoreSections = hasRestore(d.services) ? renderRestoreSections(ctx, d.services, d.restoreState, await d.services.recovery.list()) : []
+  const resetControls = hasRestore(d.services) ? renderResetControls(ctx, d.services, d.restoreState) : null
   return h('div', { class: 'screen', 'data-screen': 'data' },
     h('div', { class: 'row' }, button('← Bugün', () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Veri')),
     backupSection,
-    ...extraSections,
+    ...restoreSections,
     h('section', { class: 'card stack', 'data-section': 'motor' },
       h('h2', { class: 'text-section' }, 'Motor'),
       button('Hafızayı yeniden hesapla', async () => { await m.refresh(); ctx.notice('Hafıza durumu öğrenme geçmişinden yeniden hesaplandı.', 'ok'); await ctx.render() }, { testid: 'rebuild' }),
@@ -39,6 +45,7 @@ export async function renderData(ctx: AppContext, d: DataScreenDeps): Promise<HT
       field('Günlük yeni (newPerDay)', newPerDayIn),
       button('Tavanları kaydet', () => void saveCaps(), { class: 'btn-inline', testid: 'save-caps' }),
       h('p', { class: 'version-line', 'data-testid': 'version-line' }, `uygulama ${ctx.appVersion} · şema ${SCHEMA_VERSION} · ${cfg.engine} ${cfg.engineVersion} · ${cfg.algorithm} · hedef hatırlama ${cfg.requestRetention.toFixed(2)} · fuzz ${cfg.enableFuzz ? 'açık' : 'kapalı'} · policy v${m.policy.policyVersion}`),
+      resetControls,
     ),
     skew.futureDated.length
       ? h('section', { class: 'card stack', 'data-section': 'skew' },

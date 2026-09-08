@@ -27,6 +27,8 @@ export interface MotorDeps {
   repo: Repository
   clock: Clock
   ids: IdGenerator
+  /** her yazmadan önce (günün ilk değişikliğinde daily kurtarma noktası, 06 §9); hatası yazmayı engellemez */
+  beforeWrite?: () => Promise<void>
 }
 
 export interface ContentCache {
@@ -108,12 +110,22 @@ export class Motor {
     readonly repo: Repository,
     readonly clock: Clock,
     readonly ids: IdGenerator,
+    private readonly beforeWriteHook?: () => Promise<void>,
   ) {}
 
   static async create(deps: MotorDeps): Promise<Motor> {
-    const m = new Motor(deps.repo, deps.clock, deps.ids)
+    const m = new Motor(deps.repo, deps.clock, deps.ids, deps.beforeWrite)
     await m.refresh()
     return m
+  }
+
+  private async beforeWrite(): Promise<void> {
+    if (!this.beforeWriteHook) return
+    try {
+      await this.beforeWriteHook()
+    } catch {
+      // kurtarma noktası yazılamaması öğrenme kaydını engellemez (raw truth önce)
+    }
   }
 
   /** Açılış / "Hafızayı yeniden hesapla": config + ham olaylar depodan, tam REBUILD bellekte (A4 her açılışta doğrulanır). */
@@ -237,6 +249,7 @@ export class Motor {
   /** 02 §6 anlık akış: Attempt kur → appendAttempt (tek işlem) → applyAttempt (bellek) → undoToken. */
   async answerQuestion(session: Session, p: Extract<Presentation, { kind: 'question' }>, input: QuestionAnswerInput): Promise<{ attempt: QuestionAttempt; token: UndoToken | null }> {
     await this.checkExternalChanges()
+    await this.beforeWrite()
     const built = buildQuestionAttempt(
       { action: p.action, revision: p.revision, initialSelectedOptionId: input.initialSelectedOptionId, selectedOptionId: input.selectedOptionId, confidence: input.confidence, ...(input.wrongReason ? { wrongReason: input.wrongReason } : {}), responseTimeMs: input.responseTimeMs },
       { sessionId: session.sessionId, timestamp: this.clock.now(), memoryHasAtom: this.memory.has(p.revision.primaryAtomId), ...(p.replayOfAttemptId ? { replayOfAttemptId: p.replayOfAttemptId } : {}) },
@@ -248,6 +261,7 @@ export class Motor {
 
   async answerRecall(session: Session, p: Extract<Presentation, { kind: 'recall' }>, input: RecallAnswerInput): Promise<{ attempt: RecallAttempt; token: UndoToken | null }> {
     await this.checkExternalChanges()
+    await this.beforeWrite()
     const built = buildRecallAttempt(
       { action: p.action, selfAssessment: input.selfAssessment, hookShown: input.hookShown, responseTimeMs: input.responseTimeMs },
       { sessionId: session.sessionId, timestamp: this.clock.now(), memoryHasAtom: this.memory.has(p.action.atomId), ...(p.replayOfAttemptId ? { replayOfAttemptId: p.replayOfAttemptId } : {}) },
@@ -276,6 +290,7 @@ export class Motor {
   // --- içerik girişi (07 S9, S10) ---
 
   async addAtom(input: NewAtomInput): Promise<Atom> {
+    await this.beforeWrite()
     const text = input.text.trim()
     const prompt = input.prompt.trim()
     if (!text || !prompt) throw new MotorError('Atom metni ve soru yüzü boş olamaz.')
@@ -318,6 +333,7 @@ export class Motor {
 
   /** 07 S10: beş zorunlu alan; "+ Gelişmiş" isteğe bağlı. */
   async addQuestion(input: NewQuestionFormInput): Promise<ReviseOutcome> {
+    await this.beforeWrite()
     const texts = input.options.map((o) => o.trim())
     if (texts.length < 2 || texts.some((t) => !t)) throw new MotorError('Beş alan da gerekli: soru, en az iki seçenek, doğru seçenek, ana atom, kaynak.')
     if (!Number.isInteger(input.correctIndex) || input.correctIndex < 0 || input.correctIndex >= texts.length) throw new MotorError('Doğru seçenek işaretlenmeli.')
@@ -341,6 +357,7 @@ export class Motor {
   }
 
   async reviseQuestion(questionId: string, patch: QuestionPatch, contentError?: ContentErrorRequest): Promise<ReviseOutcome> {
+    await this.beforeWrite()
     const out = await this.repo.reviseQuestion(questionId, patch, this.clock.now(), contentError)
     if (contentError?.attemptIds.length) await this.refresh() // K01: void'ler yazıldı → REBUILD
     return out
