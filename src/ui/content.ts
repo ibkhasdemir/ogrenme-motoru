@@ -41,15 +41,16 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
   const rest = atoms.filter((a) => a.prompt.trim())
   const search = input({ type: 'search', placeholder: 'Ara', value: query, 'aria-label': 'Ara' })
   search.addEventListener('input', () => void ctx.navigate({ name: 'content', view: { kind: 'list', query: search.value } }))
-  const row = (a: Atom, badge?: string) => {
+  const row = (a: Atom, badge?: string, withCrumb = true) => {
     const qCount = c.questions.filter((x) => x.primaryAtomId === a.id && !x.archived).length
     const due = ctx.motor.nextDueOf(a.id)
     const topic = c.topics.find((t) => t.id === a.topicId)
     const subject = topic ? c.subjects.find((s) => s.id === topic.subjectId) : undefined
+    const crumb = withCrumb ? [subject?.name, topic?.name].filter(Boolean).join(' › ') : '' // grup içinde başlık zaten söyler
     return h('button', { type: 'button', class: 'list-item', 'data-atom': a.id, onClick: () => void ctx.navigate({ name: 'content', view: { kind: 'atom', atomId: a.id } }) },
       h('span', { class: 'stack' },
         h('span', { class: 'text-body' }, a.text),
-        h('span', { class: 'text-meta' }, `${[subject?.name, topic?.name].filter(Boolean).join(' › ')} · ${qCount} soru${due ? ` · sonraki vade ${formatDateTimeTr(due)}` : ''}`),
+        h('span', { class: 'text-meta' }, [crumb, `${qCount} soru`, due ? `sonraki vade ${formatDateTimeTr(due)}` : ''].filter(Boolean).join(' · ')),
       ),
       badge ? h('span', { class: 'badge' }, badge) : null,
     )
@@ -73,7 +74,7 @@ async function renderList(ctx: AppContext, query: string): Promise<HTMLElement> 
     rest.length
       ? h('div', { class: 'stack' }, ...groups.map((g) => h('details', { class: 'group', open: openAll, 'data-group': g.key },
         h('summary', { class: 'group-summary' }, h('span', { class: 'text-body' }, g.label), h('span', { class: 'text-meta' }, `${g.atoms.length} atom · ${g.questions} soru`)),
-        h('div', { class: 'stack group-body' }, ...g.atoms.map((a) => row(a))),
+        h('div', { class: 'stack group-body' }, ...g.atoms.map((a) => row(a, undefined, false))),
       )))
       : (!missingPrompt.length ? h('p', { class: 'text-support' }, 'Henüz atom yok.') : null),
   )
