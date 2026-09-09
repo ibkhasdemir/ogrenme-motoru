@@ -54,7 +54,8 @@ export interface AppDeps {
 export interface AppContext {
   motor: Motor
   appVersion: string
-  navigate(screen: Screen): Promise<void>
+  /** `back: true` → geri dönüş sayılır: açılma efekti oynamaz (o ekrana zaten oradan gelinmişti) */
+  navigate(screen: Screen, opts?: { back?: boolean }): Promise<void>
   render(): Promise<void>
   notice(text: string, kind?: 'ok' | 'error' | 'info'): void
   session: Session | null
@@ -123,8 +124,9 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     motor,
     appVersion: deps.appVersion,
     get session() { return session },
-    async navigate(s) {
+    async navigate(s, opts) {
       const sameKind = screen.name === s.name
+      if (opts?.back) poppedTransition = true // "← Bugün" gibi düğmeler ileri gidiş değildir
       screen = s
       if (!popping) {
         if (sameKind) {

@@ -95,38 +95,38 @@ function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>, poi
   scrim.className = 'morph-scrim'
   document.body.appendChild(scrim)
 
-  // Kabuk ekran boyundadır ve DOKUNULAN NOKTAYA çapalanır; küçükten büyüğe ölçeklenince hareket o noktadan
-  // ÇAPRAZ olarak yayılır: sol alttan basılırsa sağ üste doğru, sağ alttan basılırsa sol üste doğru, ortadan
-  // basılırsa her yöne eşit. (Önceki sürüm kutudan kutuya interpolasyon yapıyordu; nereye basılırsa basılsın
-  // aynı "perde yukarı açılıyor" hareketi çıkıyordu.)
-  const originX = Math.min(Math.max(point.x, 0), vw)
-  const originY = Math.min(Math.max(point.y, 0), vh)
-  // Başlangıç ölçeği ALAN oranından gelir (iki kenarın geometrik ortalaması), en büyük kenardan DEĞİL.
-  // `max(genişlik, yükseklik)` kullanmak tam genişlikteki her öğede — birincil düğme, her liste satırı — oranı
-  // 1'e yaklaştırıyor ve kabuk %60'tan başlıyordu: büyüme neredeyse görünmüyordu. Alan oranı, geniş ve alçak bir
-  // satırın gerçekte ekranın ne kadarını kapladığını doğru anlatır. Alt/üst sınır: iğne başı da olmasın, kocaman da.
-  const startScale = Math.min(0.32, Math.max(Math.sqrt((box.width / vw) * (box.height / vh)), 0.12))
+  // Kabuk GERÇEK KUTU GEOMETRİSİYLE büyür (sol/üst/genişlik/yükseklik), ölçekle değil. Ölçek yaklaşımı iki şeyi
+  // bozuyordu: (a) ekran boyundaki bir kutuya kapsül yarıçapı verilince yarıçap %50'ye kırpılıp DEV BİR ELİPS
+  // çıkıyordu, (b) kenar ve yarıçap ölçekle bozulduğu için karşı-ölçekleme gerekiyordu. Gerçek geometride yarıçap
+  // ve kenar dürüsttür.
+  // Çapraz süpürme, ARA KAREYLE kurulur: dokunuşa YAKIN kenarlar yerinde kalırken UZAK kenarlar önce ekranın
+  // sonuna gider. Sol alttan basılırsa şekil önce sağ-üste fırlar, sonra kalan diliği doldurur.
+  const nearLeft = point.x < vw / 2
+  const nearTop = point.y < vh / 2
+  const midLeft = nearLeft ? box.left : 0
+  const midWidth = nearLeft ? Math.max(box.width, vw - box.left) : Math.max(box.width, box.left + box.width)
+  const midTop = nearTop ? box.top : 0
+  const midHeight = nearTop ? Math.max(box.height, vh - box.top) : Math.max(box.height, box.top + box.height)
+  // Kapsül düğmede hesaplanan yarıçap 999px'tir; kutunun yarısıyla sınırlanmazsa büyüyen kutuda elips olur.
+  const rawRadius = Number.parseFloat(box.radius) || 0
+  const startRadius = Math.min(rawRadius, box.width / 2, box.height / 2)
+
   const shell = document.createElement('div')
   shell.setAttribute('aria-hidden', 'true')
   shell.className = 'morph-shell'
   shell.style.cssText = [
-    'left:0', 'top:0', `width:${vw}px`, `height:${vh}px`,
-    `transform-origin:${originX}px ${originY}px`,
-    `border-radius:${box.radius}`,
+    `left:${box.left}px`, `top:${box.top}px`, `width:${box.width}px`, `height:${box.height}px`,
+    `border-radius:${startRadius}px`,
     ...(box.background ? [`--shell-tint:${box.background}`] : []),
   ].join(';')
   document.body.appendChild(shell)
 
   const easing = 'cubic-bezier(0.2, 0, 0, 1)'
-  // Cam kenarı (rim) da ölçekle inceldiği için karşı-ölçeklenir: görünen kalınlık yol boyunca ~1 px kalır.
-  const rimAt = (scale: number): string => `${Math.min(12, Math.max(1, 1 / scale)).toFixed(2)}px`
-  const midScale = (startScale + 1) / 2
   const shellAnim = shell.animate([
-    { transform: `scale(${startScale})`, borderRadius: box.radius, borderWidth: rimAt(startScale), opacity: 1 },
-    { transform: `scale(${midScale})`, borderWidth: rimAt(midScale), opacity: 1, offset: 0.5 },
-    // Kabuk CAM olduğu için sona kadar kalabilir ve orada erir: opak bir renk katmanı ekranı kaplamaz, arkası
-    // bulanık geçer. (Renk dolgusuyken mürekkep düğmede tam ekran siyah bir kare çakması oluyordu.)
-    { transform: 'scale(1)', borderRadius: '0px', borderWidth: '1px', opacity: 0 },
+    { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, borderRadius: `${startRadius}px`, opacity: 1 },
+    { left: `${midLeft}px`, top: `${midTop}px`, width: `${midWidth}px`, height: `${midHeight}px`, opacity: 1, offset: 0.55 },
+    // Kabuk yarı saydam olduğu için sona kadar kalabilir ve orada erir: opak bir renk katmanı ekranı kaplamaz.
+    { left: '0px', top: '0px', width: `${vw}px`, height: `${vh}px`, borderRadius: '0px', opacity: 0 },
   ], { duration: MORPH_MS, easing })
   const clipAnim = el.animate([
     { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round ${box.radius})`, opacity: 0.55 },

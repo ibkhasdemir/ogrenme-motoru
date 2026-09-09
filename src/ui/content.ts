@@ -141,7 +141,7 @@ async function renderTopics(ctx: AppContext): Promise<HTMLElement> {
 }
 
 function back(ctx: AppContext, view: ContentView = { kind: 'list' }): HTMLElement {
-  return button('← İçerik', () => void ctx.navigate({ name: 'content', view }), { variant: 'quiet', class: 'btn-inline' })
+  return button('← İçerik', () => void ctx.navigate({ name: 'content', view }, { back: true }), { variant: 'quiet', class: 'btn-inline' })
 }
 
 async function renderList(ctx: AppContext, query: string, archived: boolean): Promise<HTMLElement> {
@@ -198,14 +198,14 @@ async function renderList(ctx: AppContext, query: string, archived: boolean): Pr
   }
   const openAll = !!q || groups.length === 1
   return h('div', { class: 'screen', 'data-screen': 'content' },
-    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik')),
+    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }, { back: true }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik')),
     h('div', { class: 'row' },
       button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' }),
       button('+ Atom', () => void ctx.navigate({ name: 'atomForm' }), { class: 'btn-inline', icon: 'atom' }),
       button('+ Soru', () => void ctx.navigate({ name: 'questionForm' }), { class: 'btn-inline', icon: 'question' }),
       button('Konular', () => void ctx.navigate({ name: 'content', view: { kind: 'topics' } }), { class: 'btn-inline', testid: 'to-topics' }),
       archived
-        ? button('← Listeye dön', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline', testid: 'to-active' })
+        ? button('← Listeye dön', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }, { back: true }), { class: 'btn-inline', testid: 'to-active' })
         : button(`Arşiv${archivedCount ? ` · ${archivedCount}` : ''}`, () => void ctx.navigate({ name: 'content', view: { kind: 'list', archived: true } }), { class: 'btn-inline', testid: 'to-archived' }),
       h('span', { class: 'text-meta' }, `${rest.length + missingPrompt.length} atom · ${groups.length} ünite`),
     ),
@@ -321,7 +321,7 @@ async function renderQuestion(ctx: AppContext, questionId: string, edit: boolean
   if (!question) return h('div', { class: 'screen' }, back(ctx), h('p', { class: 'text-body' }, 'Soru bulunamadı.'))
   const rev = await ctx.motor.repo.getRevision(question.id, question.currentVersion)
   const atom = c.atoms.find((a) => a.id === question.primaryAtomId)
-  const goBack = () => void ctx.navigate({ name: 'content', view: { kind: 'atom', atomId: question.primaryAtomId } })
+  const goBack = () => void ctx.navigate({ name: 'content', view: { kind: 'atom', atomId: question.primaryAtomId } }, { back: true })
   if (!rev) return h('div', { class: 'screen' }, back(ctx), h('p', { class: 'text-body' }, 'Güncel sürüm bulunamadı.'))
   if (edit && isCompleteRevision(rev)) return renderEdit(ctx, question, rev, c.atoms)
   return h('div', { class: 'screen', 'data-screen': 'content-question' },
@@ -388,7 +388,7 @@ function renderEdit(ctx: AppContext, question: Question, rev: CompleteQuestionRe
   }
 
   return h('div', { class: 'screen', 'data-screen': 'content-edit' },
-    button('← Soru', () => void ctx.navigate({ name: 'content', view: { kind: 'question', questionId: question.id } }), { variant: 'quiet', class: 'btn-inline' }),
+    button('← Soru', () => void ctx.navigate({ name: 'content', view: { kind: 'question', questionId: question.id } }, { back: true }), { variant: 'quiet', class: 'btn-inline' }),
     h('h1', { class: 'text-title' }, `Düzenle · v${question.currentVersion}`),
     h('div', { class: 'notice', role: 'note', 'data-testid': 'edit-warning' }, EDIT_WARNING),
     field('Soru', textIn),
@@ -413,7 +413,7 @@ async function renderHistory(ctx: AppContext, questionId: string): Promise<HTMLE
     .filter((vd) => attempts.some((a) => a.id === vd.targetAttemptId && a.kind === 'question' && a.questionId === questionId && a.questionVersion === v))
     .map((vd) => `${formatDateTimeTr(vd.timestamp)} — ${vd.note ?? 'içerik hatası'}`)
   return h('div', { class: 'screen', 'data-screen': 'content-history' },
-    button('← Soru', () => void ctx.navigate({ name: 'content', view: { kind: 'question', questionId } }), { variant: 'quiet', class: 'btn-inline' }),
+    button('← Soru', () => void ctx.navigate({ name: 'content', view: { kind: 'question', questionId } }, { back: true }), { variant: 'quiet', class: 'btn-inline' }),
     h('h1', { class: 'text-title' }, 'Sürüm geçmişi'),
     h('p', { class: 'text-support' }, 'Sürümler düzenlenemez; geçmiş denemeler cevap verdikleri sürümle saklanır.'),
     h('div', { class: 'stack' }, revisions.map((r) => revisionBlock(r, c.atoms, byVersion(r.version)))),

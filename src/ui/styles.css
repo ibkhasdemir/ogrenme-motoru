@@ -327,10 +327,12 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
    animation-fill-mode BİLEREK yok: animasyon hiç başlamaz ya da (sekme boyanmazken) donarsa öğe kendi doğal
    hâlinde — tam görünür — kalır. Hareketin bozulması içeriği asla gizlememeli (§1 okunabilirlik > süs). */
 .screen-push { animation: screen-push var(--motion-screen) var(--motion-easing); transform-origin: var(--origin-x, 50%) var(--origin-y, 38%); }
-.screen-pop { animation: screen-pop var(--motion-screen) var(--motion-easing); transform-origin: 50% 38%; }
+/* Geri dönüşte açılma efekti YOKTUR: gidilen ekran zaten oradan gelinmişti, yeniden "açmak" saçma durur.
+   Yalnız çok kısa bir belirme kalır ki takas sert bir sıçrama gibi görünmesin. */
+.screen-pop { animation: screen-pop var(--motion-fast) var(--motion-easing); }
 .screen-fade { animation: screen-fade var(--motion-fast) var(--motion-easing); }
 @keyframes screen-push { from { transform: scale(0.88); } to { transform: none; } }
-@keyframes screen-pop { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+@keyframes screen-pop { from { opacity: 0.55; } to { opacity: 1; } }
 @keyframes screen-fade { from { opacity: 0.4; } to { opacity: 1; } }
 
 /* İçerik yerleşmesi (kademeli varış). Kap büyürken içerik yukarıdan yerine oturur; okuma sırası hareketle de anlatılır.
@@ -389,15 +391,14 @@ details.group[open] > .group-body { animation: group-open var(--motion-base) var
 /* Kabuk CAMDIR (iOS 26 dili): arkasındaki sayfa bulanık geçer, kenarında ışık halkası vardır, içeride üst parıltı.
    Rengi dokunulan tuştan gelir ama YARI SAYDAM karışır (`--shell-tint`), böylece büyürken ekranı boyamaz. */
 .morph-shell {
-  position: fixed; z-index: 9; pointer-events: none; will-change: transform;
-  background: color-mix(in srgb, var(--shell-tint, var(--color-surface)) 42%, transparent);
-  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  position: fixed; z-index: 9; pointer-events: none;
+  background: color-mix(in srgb, var(--shell-tint, var(--color-surface)) 55%, transparent);
   border: 1px solid var(--glass-rim);
   box-shadow: var(--elev-2), inset 0 1px 0 var(--glass-sheen);
 }
-@supports not (backdrop-filter: blur(1px)) {
-  .morph-shell { background: color-mix(in srgb, var(--shell-tint, var(--color-surface)) 88%, transparent); }
-}
+/* Kabukta backdrop-filter YOK: kutusu her karede değiştiği için bulanıklık her karede yeniden hesaplanıyor ve
+   telefonda takılıyordu. Camın bulanıklığını ALTTAKİ PERDE verir (o sabit, yalnız opaklığı değişir) — kabuk
+   yarı saydam olduğundan içinden bulanık zemin görünür, his aynı kalır, maliyet düşer. */
 /* Perde camdır: zemini yalnız karartmaz, hafifçe bulanıklaştırır — büyüyen kabuk her renk zeminde okunur (BL-56). */
 .morph-scrim { position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--scrim); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 

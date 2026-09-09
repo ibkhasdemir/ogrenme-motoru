@@ -219,7 +219,7 @@ export async function renderContentImport(ctx: AppContext, services: BackupServi
   const plan = state.plan
   const warning = plan && !plan.errors.length ? unitWarning(plan) : null
   const canApply = !!plan && !plan.errors.length && !planIsEmpty(plan) && !state.busy && !state.generating
-  const toList = () => void ctx.navigate({ name: 'content', view: { kind: 'list' } })
+  const toList = () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }, { back: true })
   return h('div', { class: 'screen', 'data-screen': 'import' },
     h('div', { class: 'row' }, button('← İçerik', toList, { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik içe aktar')),
     h('p', { class: 'text-support' }, "1) Ders notunu aşağıya yapıştır, Şablonu paylaş (ya da kopyala) → yapay zekâ sohbeti. 2) Çıkan JSON'u kopyala. 3) Burada Panodan yapıştır → Önizle → Ekle. Yalnız ekler; mevcut içerik ve öğrenme geçmişi değişmez."),

@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **355 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **356 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 355 test yeşil |
+| Test | 35 dosya / 356 test yeşil |
 | Kaynak | 67 TypeScript dosyası, ~4.700 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
@@ -237,7 +237,14 @@ Kullanıcı: *"efekt çok amatörce, hepsi aynı şekilde açılıyor"*, *"sağa
 
 **Ders:** "en büyük kenar" bir öğenin ekrandaki ağırlığını temsil etmez; bu arayüzün çoğunluğu tam genişlikte ama alçak öğelerdir.
 
-**Kalan:** telefonda Y-26…Y-35.
+**BL-59 — üç kusur daha, üçü de kullanıcının tarifinden çıktı:**
+- *"Geri gelince ana ekran geliyor sonra saçma bir efekt geliyor."* Uygulama içindeki "← Bugün" düğmeleri `navigate` çağırdığı için sistem bunu **ileri gidiş** sayıp tam açılma efektini oynatıyordu. `navigate(screen, { back: true })` eklendi; on bir "←" düğmesi bunu geçiriyor, geri dönüşte kabuk hiç kurulmuyor.
+- *"Yuvarlak köşeli saçma oval bir şey."* Gerçekten elipsti: kabuk ekran boyunda bir kutuya çevrilip ölçekleniyordu ve kapsülün `border-radius: 999px` değeri tam ekran kutuda %50'ye kırpılıyordu. Kabuk **gerçek kutu geometrisine** döndü; yarıçap `min(hesaplanan, w/2, h/2)`'den 0'a iner.
+- *"Takılıyor gibi."* Kabukta `backdrop-filter` vardı ve kutusu her karede değiştiği için bulanıklık her karede yeniden hesaplanıyordu. Kaldırıldı; bulanıklığı sabit perde veriyor.
+
+Çapraz süpürme ara kareyle korundu: dokunuşa yakın kenarlar yerinde kalır, uzak kenarlar önce ekranın sonuna gider.
+
+**Kalan:** telefonda Y-26…Y-36.
 
 ### 7.1 Sıradaki iş adayları
 Kullanıcı yeni bir yön vermezse §4.2'deki büyük adaylardan biri seçilir. Görsel tarafta bir sonraki doğal adım **semantik metin vurgusu** (`14` §5): `renderText(text, spans?)` zaten tek geçiş noktası, tarih/istisna/kişi vurgusu oradan eklenebilir. Spec revizyonu gerektirmez ama içerik varlığına isteğe bağlı sunum notu ekler; önce `BLOCKERS.md`'ye yazılmalı.

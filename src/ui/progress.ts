@@ -33,7 +33,7 @@ export async function renderProgress(ctx: AppContext): Promise<HTMLElement> {
   const topics = topicStats({ ...input, since }, stats).filter((t) => t.answered > 0 || t.atoms > 0)
 
   return h('div', { class: 'screen', 'data-screen': 'progress' },
-    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İlerleme')),
+    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }, { back: true }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İlerleme')),
     h('p', { class: 'text-support' }, `Son ${WINDOW_DAYS} günün sayıları (arşivlenenler hariç). Burada gösterilenler ölçülen şeylerdir; puan ya da tahmin yoktur. Ne çalışacağına yine motor karar verir, bu ekran sıralamayı değiştirmez.`),
 
     h('section', { class: 'card stack', 'data-section': 'summary' },

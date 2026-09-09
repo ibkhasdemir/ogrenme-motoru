@@ -15,6 +15,13 @@ import { ROOT } from './helpers/scan'
 
 const flush = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise((r) => setTimeout(r, 0)) }
 const screenEl = () => document.querySelector<HTMLElement>('[data-screen]')!
+function stubRectsGlobal(): void {
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    return this.tagName === 'BUTTON'
+      ? { x: 20, y: 700, left: 20, top: 700, right: 130, bottom: 748, width: 110, height: 48, toJSON: () => ({}) } as DOMRect
+      : { x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 800, width: 390, height: 800, toJSON: () => ({}) } as DOMRect
+  })
+}
 const screen = () => screenEl().getAttribute('data-screen')
 const anim = () => [...screenEl().classList].filter((c) => c.startsWith('screen-'))
 const byText = (label: string) => [...document.querySelectorAll<HTMLElement>('button')].find((b) => (b.textContent ?? '').trim().startsWith(label))!
@@ -160,10 +167,13 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     const shell = document.querySelector<HTMLElement>('.morph-shell')
     expect(shell).not.toBeNull()
     expect(shell!.getAttribute('aria-hidden')).toBe('true')
-    // BL-57: kabuk ekran boyundadır ve dokunulan noktaya çapalanır (kutudan kutuya interpolasyon değil)
-    expect(shell!.style.left).toBe('0px')
-    expect(shell!.style.width).toBe('390px')
-    expect(shell!.style.transformOrigin).toBe('40px 720px')
+    // BL-59: kabuk DOKUNULAN ÖĞENİN gerçek kutusundan başlar (ölçek değil, geometri) — yarıçap ve kenar dürüst kalır
+    expect(shell!.style.left).toBe('20px')
+    expect(shell!.style.top).toBe('700px')
+    expect(shell!.style.width).toBe('110px')
+    expect(shell!.style.height).toBe('48px')
+    // kapsül yarıçapı kutunun yarısıyla sınırlanır; sınırlanmazsa büyüyen kutuda DEV ELİPS olur
+    expect(Number.parseFloat(shell!.style.borderRadius)).toBeLessThanOrEqual(24)
     expect(screenEl().classList.contains('is-morphing')).toBe(true)
     // BL-55: kabuk zeminle aynı renk olabilir; perde zemini kısarak büyüyen şekli okunur kılar
     const scrim = document.querySelector('.morph-scrim')
@@ -176,49 +186,50 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     expect(document.querySelector('.morph-scrim')).toBeNull()
   })
 
-  it('BL-57: kabuk DOKUNULAN NOKTAYA çapalanır — sol alt, sağ alt ve orta farklı merkezden büyür', async () => {
+  it('BL-59: çapraz süpürme dokunuşun tarafına göre değişir (sol alt ile sağ alt aynı ara kareyi vermez)', async () => {
     stubRects()
-    stubAnimate()
-    await app()
-    const origins: string[] = []
-    for (const [x, y] of [[30, 760], [360, 760], [195, 400]] as const) {
-      document.querySelectorAll('.morph-shell,.morph-scrim').forEach((n) => n.remove())
-      const btn = byText('İçerik')
-      btn.dispatchEvent(new MouseEvent('pointerdown', { clientX: x, clientY: y, bubbles: true }))
-      await click(btn)
-      origins.push(document.querySelector<HTMLElement>('.morph-shell')!.style.transformOrigin)
-      history.back()
-      await flush(20)
-    }
-    // ekran kutusu 390×800: dokunuş noktası kutuya kırpılır ama üçü BİRBİRİNDEN FARKLI olmalı
-    expect(new Set(origins).size).toBe(3)
-    expect(origins[0]).toContain('30px')
-    expect(origins[1]).toContain('360px')
-    expect(origins[2]).toContain('195px')
-  })
-
-  it('BL-58: TAM GENİŞLİKTEKİ öğede bile kabuk küçükten başlar (büyüme görünür kalmalı)', async () => {
-    // ekran 390×800; düğme kutusu tam genişlik ve alçak (350×48) — eski formül (en büyük kenar) 0.9 verip
-    // büyümeyi görünmez yapıyordu. Alan oranı 0.23 civarı vermeli; üst sınır 0.32.
-    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-      return this.tagName === 'BUTTON'
-        ? { x: 20, y: 700, left: 20, top: 700, right: 370, bottom: 748, width: 350, height: 48, toJSON: () => ({}) } as DOMRect
-        : { x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 800, width: 390, height: 800, toJSON: () => ({}) } as DOMRect
-    })
     const frames: Keyframe[][] = []
     ;(Element.prototype as unknown as Proto).animate = function (kf: Keyframe[]) {
       frames.push(kf)
       return { finished: Promise.resolve(), cancel: () => {}, playState: 'running' } as unknown as Animation
     }
     await app()
+    const mids: string[] = []
+    for (const [x, y] of [[30, 760], [360, 760]] as const) {
+      frames.length = 0
+      document.querySelectorAll('.morph-shell,.morph-scrim').forEach((n) => n.remove())
+      const btn = byText('İçerik')
+      btn.dispatchEvent(new MouseEvent('pointerdown', { clientX: x, clientY: y, bubbles: true }))
+      await click(btn)
+      const shellFrames = frames.find((f) => typeof f[0]?.left === 'string')
+      expect(shellFrames).toBeDefined()
+      const mid = shellFrames![1]!
+      mids.push(`${String(mid.left)}|${String(mid.width)}`)
+      history.back()
+      await flush(20)
+    }
+    // sol taraftan basınca sol kenar YERİNDE kalır (left = kutunun solu), sağ taraftan basınca sıfıra iner
+    expect(mids[0]).not.toBe(mids[1])
+    expect(mids[0]!.startsWith('20px|')).toBe(true)
+    expect(mids[1]!.startsWith('0px|')).toBe(true)
+  })
+
+  it('BL-58/59: tam genişlikteki alçak öğede kabuk ekranın küçük bir bölümünden başlar', async () => {
+    // ekran 390×800; düğme tam genişlik ve alçak (350×48) — büyüme görünür kalmalı, kabuk ekranı doldurmuş
+    // gibi başlamamalı. (Ölçek yaklaşımında "en büyük kenar" formülü burada 0.9 verip büyümeyi yok ediyordu.)
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return this.tagName === 'BUTTON'
+        ? { x: 20, y: 700, left: 20, top: 700, right: 370, bottom: 748, width: 350, height: 48, toJSON: () => ({}) } as DOMRect
+        : { x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 800, width: 390, height: 800, toJSON: () => ({}) } as DOMRect
+    })
+    stubAnimate()
+    await app()
     const btn = byText('İçerik')
     btn.dispatchEvent(new MouseEvent('pointerdown', { clientX: 40, clientY: 720, bubbles: true }))
     await click(btn)
-    const shellFrames = frames.find((f) => typeof f[0]?.transform === 'string' && String(f[0].transform).startsWith('scale('))
-    expect(shellFrames).toBeDefined()
-    const start = Number(String(shellFrames![0]!.transform).replace('scale(', '').replace(')', ''))
-    expect(start).toBeGreaterThanOrEqual(0.12)
-    expect(start).toBeLessThanOrEqual(0.32)
+    const shell = document.querySelector<HTMLElement>('.morph-shell')!
+    const areaRatio = (Number.parseFloat(shell.style.width) * Number.parseFloat(shell.style.height)) / (390 * 800)
+    expect(areaRatio).toBeLessThan(0.1)
   })
 
   it('azaltılmış hareket açıkken kabuk hiç kurulmaz', async () => {
@@ -274,6 +285,34 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     document.body.replaceChildren()
     expect(document.querySelector('.morph-shell')).toBeNull()
     expect(document.querySelector('.morph-scrim')).toBeNull()
+  })
+})
+
+describe('BL-59 — geri dönüşte açılma efekti oynamaz', () => {
+  it('"← Bugün" ileri gidiş sayılmaz: kabuk kurulmaz, ekran pop ile gelir', async () => {
+    stubRectsGlobal()
+    // `finished` ÇÖZÜLMEZ: çözülürse temizlik hemen çalışır ve kabuk daha biz bakamadan silinir
+    ;(Element.prototype as unknown as Record<string, unknown>).animate = function () {
+      return { finished: new Promise<void>(() => {}), cancel: () => {}, playState: 'running' } as unknown as Animation
+    }
+    try {
+      await app()
+      const toContent = byText('İçerik')
+      toContent.dispatchEvent(new MouseEvent('pointerdown', { clientX: 40, clientY: 720, bubbles: true }))
+      await click(toContent)
+      expect(document.querySelector('.morph-shell')).not.toBeNull()
+      document.querySelectorAll('.morph-shell,.morph-scrim').forEach((n) => n.remove())
+      // geri dön: "← Bugün"
+      const back = byText('← Bugün')
+      back.dispatchEvent(new MouseEvent('pointerdown', { clientX: 40, clientY: 40, bubbles: true }))
+      await click(back)
+      expect(screen()).toBe('today')
+      expect(document.querySelector('.morph-shell')).toBeNull()
+      expect(screenEl().classList.contains('screen-pop')).toBe(true)
+      expect(screenEl().classList.contains('screen-push')).toBe(false)
+    } finally {
+      delete (Element.prototype as unknown as Record<string, unknown>).animate
+    }
   })
 })
 

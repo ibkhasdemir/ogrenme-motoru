@@ -58,7 +58,7 @@ export async function renderCapture(ctx: AppContext, state: CaptureUiState): Pro
     }
   }
   return h('div', { class: 'screen', 'data-screen': 'capture' },
-    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Yakala')),
+    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }, { back: true }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Yakala')),
     h('p', { class: 'text-support' }, 'Şimdi düzenlemek zorunda değilsin. Kutuda bekler, sonra atomuna bağlarsın. Bu kayıt bir ölçüm değildir; vadelerine dokunmaz.'),
     field('Ne yakaladın', textIn),
     field('Nereden', src),
@@ -79,7 +79,7 @@ export async function renderInbox(ctx: AppContext, state: CaptureUiState): Promi
   const open = proc ? items.find((i) => i.id === proc.itemId) : undefined
   if (proc && !open) state.processing = null
   return h('div', { class: 'screen', 'data-screen': 'inbox' },
-    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Kutu')),
+    h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }, { back: true }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Kutu')),
     open ? renderProcess(ctx, state, open, c.atoms) : renderList(ctx, state, items),
   )
 }

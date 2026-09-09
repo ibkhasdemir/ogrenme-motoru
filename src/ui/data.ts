@@ -39,7 +39,7 @@ export async function renderData(ctx: AppContext, d: DataScreenDeps): Promise<HT
   const restoreSections = hasRestore(d.services) ? renderRestoreSections(ctx, d.services, d.restoreState, await d.services.recovery.list()) : []
   const resetControls = hasRestore(d.services) ? renderResetControls(ctx, d.services, d.restoreState) : null
   return h('div', { class: 'screen', 'data-screen': 'data' },
-    h('div', { class: 'row' }, button('← Bugün', () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Veri')),
+    h('div', { class: 'row' }, button('← Bugün', () => void ctx.navigate({ name: 'today' }, { back: true }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'Veri')),
     backupSection,
     ...restoreSections,
     d.ai ? renderAiSection(ctx, d.ai.store, d.ai.state) : null,
