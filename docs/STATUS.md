@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **345 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **346 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 345 test yeşil |
+| Test | 35 dosya / 346 test yeşil |
 | Kaynak | 66 TypeScript dosyası, ~4.600 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
@@ -198,7 +198,10 @@ Kullanıcı BL-50'den sonra **"hiçbiri olmamış, ultra premium istiyorum"** de
 ### 7.3 Üçüncü tur — BL-52 hareket katmanı
 Kullanıcı tasarımı onayladı, "animasyonlar eksik" dedi. `14` §14 hareketi bir listeyle sınırlar (cevap geri bildirimi, kart geçişi, durum değişimi, yeni içeriğin açılması, sheet, ilerleme) ve bounce/konfeti/oyunlaştırmayı yasaklar; `10` §1 de "süs amaçlı ağır animasyon"u non-goal sayar. Bu turda **listenin izin verdiği ama hiç kullanılmamış** yerler dolduruldu: kademeli varış, cevap geri bildirimi (sonuç kelimesi + doğru/yanlış dolgusu), seçim noktası, grup açılışı, geri al çubuğu, yapışkan başlık durumu.
 
-İki kalıcı ders:
+**BL-52 bozuk çıktı, BL-53'te düzeltildi.** `animationend` kabarcıklanır; temizleyici ekran köküne `{ once: true }` ile bağlıydı ve kademeli varış gelince **en hızlı çocuğun bitişi** ekranın sınıfını düşürüp henüz bitmemiş bütün animasyonları kesiyordu — ekran yarı yolda zıplıyordu. Kullanıcı bunu "pop up mı yaptın, açılıyor kapanıyor" diye bildirdi. Yama: `ev.target === el` kontrolü, `once` kaldırıldı. **Hareketin şiddeti korundu** — kullanıcı "ona benzer bir şey yap demiştim" deyince ilk refleksle yapılan kısma geri alındı; beğenilen efektin kendisi değil, kesilmesi sorundu. Ayar tek token: `--motion-settle`, `--motion-screen`.
+
+Üç kalıcı ders:
+- **Kap düzeyinde animasyon temizliğinde hedef kontrolü şart.** İçeriye sonradan animasyon eklendiğinde sessizce bozulur.
 - **`animation-delay` kullanma.** Gecikmeli girişte öğe önce görünür sonra kaybolur; bunu ancak `fill-mode` gizler, `fill-mode` ise donmuş animasyonda içeriği yok eder (BL-50). Çözüm: hepsi aynı anda başlar, **farklı sürelerde varır**. Test bunu bekçiler.
 - **`.is-stuck` ölü kuraldı.** BL-45'te CSS'e yazılmış, hiçbir yerde açılmamıştı. Yeni bir görsel kural yazarken "bunu kim açıyor?" sorusu sorulmalı.
 

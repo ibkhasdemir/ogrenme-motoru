@@ -194,6 +194,24 @@ describe('BL-50 — hareket içeriği asla gizlemez (14 §1: okunabilirlik > sü
     expect(leaks).toEqual([])
   })
 
+  it('BL-53: içeriden KABARCIKLANAN animationend geçişi kesmez (yalnız ekranın kendi animasyonu temizler)', () => {
+    const el = document.createElement('div')
+    el.className = 'screen'
+    const child = document.createElement('p')
+    el.appendChild(child)
+    document.body.appendChild(el)
+    applyScreenTransition(el, 'push')
+    expect(el.classList.contains('screen-push')).toBe(true)
+    // kademeli varıştaki en hızlı çocuk biter → olay ekrana kabarcıklanır; ekran sınıfını DÜŞÜRMEMELİ,
+    // yoksa henüz bitmemiş bütün animasyonlar aynı anda kesilir ve ekran yarı yolda zıplar.
+    child.dispatchEvent(new Event('animationend', { bubbles: true }))
+    expect(el.classList.contains('screen-push')).toBe(true)
+    // ekranın kendi animasyonu bitince temizlenir
+    el.dispatchEvent(new Event('animationend'))
+    expect(el.classList.contains('screen-push')).toBe(false)
+    el.remove()
+  })
+
   it('animationend gelmezse sınıf yine de düşer (emniyet ağı)', () => {
     vi.useFakeTimers()
     try {

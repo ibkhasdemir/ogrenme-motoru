@@ -202,6 +202,16 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Sınır: hepsi ≤ 390 ms, hiçbiri döngüsel değil, `prefers-reduced-motion` hepsini kapatır (tek blokta toplandı).
 - Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (16). Telefon kontrolü: Y-32.
 
+### BL-53 — BL-52'nin hatası: kabarcıklanan `animationend` geçişi yarıda kesiyordu (2026-09-09)
+- Gözlem: kullanıcı BL-52'den hemen sonra **"pop up mı yaptın, efektli açılıyor kapanıyor"** dedi. Haklıydı; BL-52 bozuktu.
+- Sebep: `animationend` **kabarcıklanır**. `applyScreenTransition` temizleyiciyi ekran köküne `{ once: true }` ile bağlıyordu. BL-52'nin kademeli varışı gelince ekranın İÇİNDEKİ çocuklar da animasyon üretmeye başladı; **en hızlı çocuk (240 ms) bitince olay ekrana çıkıyor**, `once` dinleyicisi tetikleniyor, ekranın sınıfı düşüyor ve o sınıfa bağlı olan — henüz bitmemiş — bütün animasyonlar (kabın ölçeklenmesi + diğer çocuklar) **aynı anda kesiliyordu**. Ekran yarı yolda zıplıyordu. BL-52 öncesinde ekranın içinde animasyon olmadığı için hata görünmüyordu; kademeli varış onu ortaya çıkardı.
+- Yama: temizleyici yalnız **ekranın kendi** animasyonuyla çalışır (`ev.target === el`). `{ once: true }` kaldırıldı — kabarcıklanan ilk olay dinleyiciyi tüketiyordu; dinleyici artık temizlik sırasında elle kaldırılıyor. Emniyet ağı zaman aşımı yerinde.
+- **Hareketin şiddeti korundu.** İlk refleksle kısılmıştı (`scale(0.88) → 0.94`); kullanıcı "ona benzer bir şey yap demiştim, yanlış anladın" deyince geri alındı. Kullanıcının gördüğü ve beğendiği efektin kendisi sorun değildi — sorun efektin yarıda kesilmesiydi. Değerler BL-52'deki gibi: `scale(0.88)`, kademeli varış 240 ms tabanlı, 12 px, en yavaş çocuk 390 ms. Ayar tek token: `--motion-settle` (kademeli varış) ve `--motion-screen` (kap büyümesi).
+- Ders 2: **kullanıcı bir hatayı bildirirken beğendiği şeyi de tarif ediyor olabilir.** "Pop up mı yaptın" cümlesi hem hatayı hem beğeniyi taşıyordu; hatayı düzeltip efekti de kısmak, istenen şeyi geri almak oldu.
+- Gerileme testi: `BL-53: içeriden KABARCIKLANAN animationend geçişi kesmez`. Eski kodla düşüyor, yamayla geçiyor (doğrulandı).
+- Ders: **kap düzeyinde animasyon temizliği yaparken hedef kontrolü şart.** İçeriye bir gün animasyon eklendiğinde sessizce bozulur; hata animasyonu ekleyen turda değil, temizliği yazan turda doğmuştur.
+- Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (17).
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

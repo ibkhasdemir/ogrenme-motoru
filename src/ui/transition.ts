@@ -64,11 +64,17 @@ export function applyScreenTransition(el: HTMLElement, kind: ScreenTransition | 
   let timer: ReturnType<typeof setTimeout> | null = null
   const done = (): void => {
     if (timer) { clearTimeout(timer); timer = null }
+    if (typeof el.removeEventListener === 'function') el.removeEventListener('animationend', onEnd)
     el.classList.remove(cls)
     el.style.removeProperty('--origin-x')
     el.style.removeProperty('--origin-y')
   }
-  if (typeof el.addEventListener === 'function') el.addEventListener('animationend', done, { once: true })
+  // animationend KABARCIKLANIR: içerideki kademeli varış animasyonları da bu öğeye ulaşır. Hedef kontrolü olmadan
+  // ilk biten çocuk (en hızlısı) ekranın sınıfını düşürür ve HENÜZ BİTMEMİŞ bütün animasyonlar aynı anda kesilir —
+  // ekran yarı yolda zıplar. Bu yüzden yalnız ekranın KENDİ animasyonu temizliği tetikler ({ once } da bu yüzden yok:
+  // kabarcıklanan ilk olay dinleyiciyi tüketirdi).
+  const onEnd = (ev: Event): void => { if (ev.target === el) done() }
+  if (typeof el.addEventListener === 'function') el.addEventListener('animationend', onEnd)
   // Emniyet ağı: animationend gelmezse (hareket kapalı, sekme boyanmıyor, animasyon yarıda kesildi) sınıf yine de düşer.
   timer = setTimeout(done, CLEANUP_MS)
 }
