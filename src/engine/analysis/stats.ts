@@ -84,7 +84,9 @@ export function atomStats(input: AnalysisInput): AtomStat[] {
   }
   const out: AtomStat[] = []
   for (const [atomId, arr] of byAtom) {
-    arr.sort((x, y) => x.sequence - y.sequence)
+    // Zaman ekseni: external (yakalama) Attempt geçmiş tarihli yazılır; sequence yazma sırasıdır.
+    // Streak ve "son deneme" kullanıcıya göre zamana bakar; eşitlikte sequence ayırır.
+    arr.sort((x, y) => x.timestamp.localeCompare(y.timestamp) || x.sequence - y.sequence)
     let failStreak = 0
     for (let i = arr.length - 1; i >= 0; i--) {
       if (isSuccess(arr[i]!)) break

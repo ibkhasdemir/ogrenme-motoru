@@ -542,7 +542,7 @@ export class Motor {
     await this.repo.unarchiveAtom(atomId)
   }
 
-  /** Bu atomu işaret eden (void edilmiş dâhil) ham kayıt var mı — kalıcı silmenin tek engeli. */
+  /** Bu atomu işaret eden (void edilmiş dâhil) ham kayıt var mı — kalıcı silmenin ilk engeli. */
   hasHistory(atomId: string): boolean {
     return this.attempts.some((a) => a.primaryAtomIdAtAttempt === atomId)
   }
@@ -552,11 +552,21 @@ export class Motor {
    * arşivlemeye yönlendirilir. Soru varsa önce o soru arşivlenmeli (soru sürümleri de ham geçmişe bağlıdır).
    */
   async deleteAtomPermanently(atomId: string): Promise<void> {
+    // başka bağlamda (ikinci sekme) yazılmış olabilecek kayıtlar görülmeden karar verilmez: yetim Attempt yedeği
+    // geri yüklenemez hâle getirir (A3 + 06 §8 doğrulaması)
+    await this.checkExternalChanges()
     await this.beforeWrite()
     const c = await this.content()
     if (!c.atoms.some((a) => a.id === atomId)) throw new MotorError(`Atom bulunamadı: ${atomId}`)
     if (this.hasHistory(atomId)) throw new MotorError('Bu atomun öğrenme geçmişi var; silinemez, arşivlenir.')
     if (c.questions.some((q) => q.primaryAtomId === atomId)) throw new MotorError('Bu atomun sorusu var; önce soruyu arşivle.')
+    // yetim referans bırakmayacağız: ikincil atom bağı, yanlış-şık bağı ve karıştırma ilişkisi de engeldir
+    const [questionAtoms, optionAtoms, relations] = await Promise.all([
+      this.repo.listQuestionAtoms(), this.repo.listOptionAtoms(), this.repo.listAtomRelations(),
+    ])
+    if (questionAtoms.some((qa) => qa.atomId === atomId)) throw new MotorError('Bu atom bir soruya bağlı (ikincil atom); silinemez, arşivlenir.')
+    if (optionAtoms.some((oa) => oa.atomId === atomId)) throw new MotorError('Bu atom bir sorunun yanlış şıkkına bağlı; silinemez, arşivlenir.')
+    if (relations.some((r) => r.fromAtomId === atomId || r.toAtomId === atomId)) throw new MotorError('Bu atomun karıştırma ilişkisi var; silinemez, arşivlenir.')
     await this.repo.deleteAtomAndHooks(atomId)
   }
 

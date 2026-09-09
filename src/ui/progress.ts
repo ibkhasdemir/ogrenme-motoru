@@ -12,7 +12,10 @@ export async function renderProgress(ctx: AppContext): Promise<HTMLElement> {
   const c = await ctx.motor.content()
   const now = ctx.motor.clock.now()
   const since = new Date(Date.parse(now) - WINDOW_DAYS * DAY_MS).toISOString()
-  const input = { attempts: ctx.motor.listAttempts(), voids: ctx.motor.listVoids(), atoms: c.atoms, topics: c.topics, subjects: c.subjects }
+  // Arşivlenen atom çalışma dünyasından çıkmıştır: özet, listeler ve konu toplamları aynı kümeyi kullanır
+  const active = new Set(c.atoms.filter((a) => !a.archived).map((a) => a.id))
+  const attempts = ctx.motor.listAttempts().filter((a) => active.has(a.primaryAtomIdAtAttempt))
+  const input = { attempts, voids: ctx.motor.listVoids(), atoms: c.atoms, topics: c.topics, subjects: c.subjects }
   const all = summarize(input)
   const recent = summarize({ ...input, since })
   const stats = atomStats({ ...input, since })
@@ -31,7 +34,7 @@ export async function renderProgress(ctx: AppContext): Promise<HTMLElement> {
 
   return h('div', { class: 'screen', 'data-screen': 'progress' },
     h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İlerleme')),
-    h('p', { class: 'text-support' }, `Son ${WINDOW_DAYS} günün sayıları. Burada gösterilenler ölçülen şeylerdir; puan ya da tahmin yoktur. Ne çalışacağına yine motor karar verir, bu ekran sıralamayı değiştirmez.`),
+    h('p', { class: 'text-support' }, `Son ${WINDOW_DAYS} günün sayıları (arşivlenenler hariç). Burada gösterilenler ölçülen şeylerdir; puan ya da tahmin yoktur. Ne çalışacağına yine motor karar verir, bu ekran sıralamayı değiştirmez.`),
 
     h('section', { class: 'card stack', 'data-section': 'summary' },
       h('h2', { class: 'text-section' }, 'Özet'),

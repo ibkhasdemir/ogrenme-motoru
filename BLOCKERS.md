@@ -142,6 +142,17 @@ Kaynak: 15 dosyanın tam okunması + spec tutarlılık denetimi (2026-09-08; 6 l
 - Yapılan: yeni renk/kavram YOK; var olan token'larla hiyerarşi ve ritim — kart yarıçapı/gölgesi, sayı kartlarında rakam öne çıkması, liste satırında "›" dokunma işareti ve basılı geri bildirim, form etiketlerinin okunur ağırlığı, yardım metninin ayrışması, bildirim iç boşluğu. Taşma düzeltildi (negatif kenar yerine kendi kabında kaydırma + `body { overflow-x: hidden }`).
 - Durum: **KAPANDI** (bu tur). Daha ileri görsel çalışma spec `14` revizyonu ile yapılır.
 
+### BL-49 — Üçüncü bağımsız denetimin 7 bulgusu (2026-09-09)
+Hepsi düzeltildi; gerileme testleri `tests/phase19-audit3.test.ts`.
+1. `deleteAtomPermanently` bayat bellek listesine bakıyordu: ikinci bağlamda yazılmış Attempt görülmediği için atom silinebiliyor, yedek "Attempt.primaryAtomIdAtAttempt çözülmüyor" ile **geri yüklenemez** hâle geliyordu (A3/A21). Artık silmeden önce `checkExternalChanges()`.
+2. Silme yalnız `primaryAtomId`'ye bakıyordu; ikincil `QuestionAtom`, `OptionAtom` ve `AtomRelation` yetim kalıyor, yedek doğrulaması bozuluyordu. Üçü de artık engel (mesajla arşivlemeye yönlendirir).
+3. Aynı ekran türünde `navigate` yığın tepesini güncellemiyordu → geri yanlış ekrana (hatta oturumsuz çalışma ekranına) götürüyordu.
+4. `popstate` `history.state.motorDepth`'i okumuyor, koşulsuz `pop` yapıyordu → "geri sonra ileri" yığını ikinci kez düşürüyordu. Artık derinlikle adreslenir.
+5. Yazma-kilitli kurtarma ekranı (`06` §8.6) tek geri hareketiyle terk edilebiliyordu. Artık kendi geçmiş girdisini alır ve geri hareketi yutulur.
+6. `atomStats` `sequence` ile sıralıyordu; external (yakalama) Attempt geçmiş tarihli yazıldığı için `failStreak`/`lastAt` yanlış çıkıyordu. Sıralama zaman eksenine alındı (eşitlikte sequence).
+7. İlerleme ekranında arşivli atomlar özette/listelerde sayılıp konu toplamlarında sayılmıyordu. Ekranın tamamı artık yalnız arşivlenmemiş atomları sayar; başlık bunu söyler.
+Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek, kurtarma dökümü, DOM, hata mesajları temiz).
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

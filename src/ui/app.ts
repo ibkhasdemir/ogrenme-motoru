@@ -96,6 +96,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   // Geri hareketi (BL-45): her ekran geçişi tarayıcı geçmişine yazılır. iOS ana ekran uygulamasında kenardan kaydırma ve
   // Android'de donanım geri tuşu bunu kullanır; ayrıca ekranın üstündeki "←" hep yapışık durur.
   const stack: Screen[] = [{ name: 'today' }]
+  let depth = 1 // geçmişteki konumumuz (history.state.motorDepth ile aynı); ileri gitme bunu artırır
   let popping = false
   const historyOk = typeof history !== 'undefined' && typeof history.pushState === 'function'
 
@@ -106,12 +107,17 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     async navigate(s) {
       const sameKind = screen.name === s.name
       screen = s
-      if (!popping && historyOk) {
-        // aynı ekranın içindeki durum değişimi (arama yazarken) geçmişi şişirmesin
-        if (sameKind) history.replaceState({ motorDepth: stack.length }, '')
-        else { stack.push(s); history.pushState({ motorDepth: stack.length }, '') }
-      } else if (sameKind) {
-        stack[stack.length - 1] = s
+      if (!popping) {
+        if (sameKind) {
+          // aynı ekranın içindeki durum değişimi (arama yazarken): geçmiş şişmez ama yığın tepesi GÜNCELLENİR
+          stack[depth - 1] = s
+          if (historyOk) history.replaceState({ motorDepth: depth }, '')
+        } else {
+          stack.length = depth // geri gidip başka yere sapıldıysa ileri kayıtları düşer
+          stack.push(s)
+          depth = stack.length
+          if (historyOk) history.pushState({ motorDepth: depth }, '')
+        }
       }
       await render()
     },
@@ -128,20 +134,30 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     async lockdown(reason, jobId) {
       session = null
       screen = { name: 'lockdown', reason, jobId }
+      // kendi geçmiş girdisini alır ki geri hareketi kilitten çıkarmasın (onPopState ayrıca yutar)
+      stack.length = depth
+      stack.push(screen)
+      depth = stack.length
+      if (historyOk) history.pushState({ motorDepth: depth }, '')
       await render()
     },
   }
   const restoreState: { restore: RestoreUiState } = { restore: { step: 'idle', message: null, error: null } }
 
   const STUDY_SCREENS = new Set(['read', 'question', 'recall', 'end'])
-  const onPopState = () => {
+  const onPopState = (ev: PopStateEvent) => {
+    // 06 §8.6: yazma-kilitli kurtarma ekranı terk edilemez; geri hareketi burada yutulur
+    if (screen.name === 'lockdown') {
+      if (historyOk) history.pushState({ motorDepth: depth }, '')
+      return
+    }
     popping = true
     try {
-      stack.pop()
-      const prev = stack[stack.length - 1] ?? { name: 'today' as const }
+      // geçmişteki konum state'ten okunur: hem geri hem İLERİ doğru ekrana götürür
+      const target = Math.min(Math.max(1, ((ev.state as { motorDepth?: number } | null)?.motorDepth) ?? 1), stack.length)
       if (STUDY_SCREENS.has(screen.name)) { session = null; undoBar = null } // yarım cevap kaydedilmez (07 §1.1)
-      screen = prev
-      if (stack.length === 0) stack.push(prev)
+      depth = target
+      screen = stack[depth - 1] ?? { name: 'today' as const }
       void render()
     } finally {
       popping = false
