@@ -160,9 +160,10 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     const shell = document.querySelector<HTMLElement>('.morph-shell')
     expect(shell).not.toBeNull()
     expect(shell!.getAttribute('aria-hidden')).toBe('true')
-    expect(shell!.style.left).toBe('20px')
-    expect(shell!.style.top).toBe('700px')
-    expect(shell!.style.width).toBe('110px')
+    // BL-57: kabuk ekran boyundadır ve dokunulan noktaya çapalanır (kutudan kutuya interpolasyon değil)
+    expect(shell!.style.left).toBe('0px')
+    expect(shell!.style.width).toBe('390px')
+    expect(shell!.style.transformOrigin).toBe('40px 720px')
     expect(screenEl().classList.contains('is-morphing')).toBe(true)
     // BL-55: kabuk zeminle aynı renk olabilir; perde zemini kısarak büyüyen şekli okunur kılar
     const scrim = document.querySelector('.morph-scrim')
@@ -173,6 +174,27 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     await flush()
     expect(document.querySelector('.morph-shell')).toBeNull()
     expect(document.querySelector('.morph-scrim')).toBeNull()
+  })
+
+  it('BL-57: kabuk DOKUNULAN NOKTAYA çapalanır — sol alt, sağ alt ve orta farklı merkezden büyür', async () => {
+    stubRects()
+    stubAnimate()
+    await app()
+    const origins: string[] = []
+    for (const [x, y] of [[30, 760], [360, 760], [195, 400]] as const) {
+      document.querySelectorAll('.morph-shell,.morph-scrim').forEach((n) => n.remove())
+      const btn = byText('İçerik')
+      btn.dispatchEvent(new MouseEvent('pointerdown', { clientX: x, clientY: y, bubbles: true }))
+      await click(btn)
+      origins.push(document.querySelector<HTMLElement>('.morph-shell')!.style.transformOrigin)
+      history.back()
+      await flush(20)
+    }
+    // ekran kutusu 390×800: dokunuş noktası kutuya kırpılır ama üçü BİRBİRİNDEN FARKLI olmalı
+    expect(new Set(origins).size).toBe(3)
+    expect(origins[0]).toContain('30px')
+    expect(origins[1]).toContain('360px')
+    expect(origins[2]).toContain('195px')
   })
 
   it('azaltılmış hareket açıkken kabuk hiç kurulmaz', async () => {
@@ -235,7 +257,8 @@ describe('BL-54 — gezinme simgeleri', () => {
   it('her gezinme düğmesinde simge var ama metin etiketi de duruyor (simge tek taşıyıcı değil, 14 §9)', async () => {
     await app()
     const nav = [...document.querySelectorAll<HTMLElement>('.nav-bar .btn')]
-    expect(nav.length).toBeGreaterThanOrEqual(7)
+    // BL-57: alt çubuk DÖRT alan taşır (yedi düğme sığmıyor, kayıyor ve kırpılıyordu)
+    expect(nav).toHaveLength(4)
     for (const b of nav) {
       const svg = b.querySelector('svg.icon')
       expect(svg).not.toBeNull()
@@ -247,9 +270,7 @@ describe('BL-54 — gezinme simgeleri', () => {
   it('simge metne karışmaz: textContent yalnız etiketi verir', async () => {
     await app()
     const labels = [...document.querySelectorAll<HTMLElement>('.nav-bar .btn')].map((b) => (b.textContent ?? '').trim())
-    expect(labels).toContain('İçerik')
-    expect(labels).toContain('Veri')
-    expect(labels).toContain('+ Yakala')
+    expect(labels).toEqual(['+ Yakala', 'Kutu', 'İçerik', 'Veri'])
   })
 })
 

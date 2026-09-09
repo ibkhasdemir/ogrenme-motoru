@@ -262,6 +262,16 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       try { f.setSelectionRange(saved.start, saved.end ?? saved.start) } catch { /* desteklemeyen tip */ }
     }
   }
+  // Yatay kaydırılan çubuk (büyük sistem yazısında alt çubuk taşabilir): her render DOM'u sıfırdan kurduğu için
+  // kaydırma konumu sıfırlanıyor ve kullanıcı sağa kaydırdığı çubuğu geri döndüğünde baştan buluyordu.
+  function captureScroll(): number[] {
+    return [...root.querySelectorAll<HTMLElement>('.nav-bar')].map((el) => el.scrollLeft)
+  }
+  function restoreScroll(saved: number[]): void {
+    const bars = [...root.querySelectorAll<HTMLElement>('.nav-bar')]
+    bars.forEach((el, i) => { const x = saved[i]; if (x) el.scrollLeft = x })
+  }
+
   function captureOpenPanels(): Set<string> {
     const open = new Set<string>()
     for (const d of root.querySelectorAll<HTMLDetailsElement>('details[data-keep-key]')) {
@@ -308,6 +318,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     if (seq !== renderSeq) return // araya yeni render girdi
     const savedFocus = captureFocus()
     const openPanels = captureOpenPanels()
+    const savedScroll = captureScroll()
     clear(root)
     if (deps.updates?.pending() && (screen.name === 'today' || screen.name === 'data')) {
       el.prepend(h('div', { class: 'notice notice-ok', role: 'status', 'data-testid': 'update-bar' }, 'Yeni sürüm hazır · ', button('Yenile', () => deps.updates!.apply(), { variant: 'quiet', class: 'btn-inline', testid: 'update-apply' })))
@@ -327,6 +338,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     applyScreenTransition(el, nextTransition())
     onScroll()
     restoreOpenPanels(openPanels)
+    restoreScroll(savedScroll)
     restoreFocus(savedFocus)
   }
 
@@ -389,6 +401,9 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
         h('div', { class: 'count' }, h('span', { class: 'count-n' }, String(summary.counts.new)), h('span', { class: 'count-l' }, 'yeni')),
         h('div', { class: 'count' }, h('span', { class: 'count-n' }, String(summary.counts.doneToday)), h('span', { class: 'count-l' }, 'bugün yapılan')),
       ),
+      h('div', { class: 'row' },
+        button('İlerleme', () => void ctx.navigate({ name: 'progress' }), { variant: 'quiet', class: 'btn-inline', testid: 'to-progress', icon: 'progress' }),
+      ),
       summary.skew.warning
         ? h('div', { class: 'notice', role: 'status' }, `Cihaz saati tutarsız görünüyor: ${summary.skew.futureDated.length} kayıt ileri tarihli · `, button('İncele', () => void ctx.navigate({ name: 'data' }), { variant: 'quiet', class: 'btn-inline' }))
         : null,
@@ -405,17 +420,16 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
           ),
         )
         : h('div', { class: 'card' }, renderText(hasAtoms ? 'Şu an vadesi gelen bir şey yok. Motor zamanı geldiğinde getirir.' : 'Henüz atom yok', 'text-body')),
-      // 14 §11: alt çubuk tek satırda, yatay kaydırmalı; sık kullanılan iki eylem başta
+      // 07 §6 + 14 §11: alt çubuk DÖRT alan taşır ve KAYDIRILMAZ. Yedi düğme tek satıra sığmıyor, yana kayıyor,
+      // sağdakiler kırpılıyor ve her yeniden çizimde başa dönüyordu. İçerik üretme eylemleri (+ Atom / + Soru)
+      // İçerik ekranına, İlerleme ise sayıların altına taşındı — ait oldukları yer orası.
       h('div', { class: 'screen-bottom' },
         h('div', { class: 'nav-bar', role: 'group', 'aria-label': 'Gezinme' },
           button('+ Yakala', () => void ctx.navigate({ name: 'capture' }), { class: 'btn-inline', testid: 'to-capture', icon: 'capture' }),
           pending > 0
             ? button(`Kutu · ${pending}`, () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox', icon: 'inbox' })
             : button('Kutu', () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox', icon: 'inbox' }),
-          button('+ Atom', () => void ctx.navigate({ name: 'atomForm' }), { class: 'btn-inline', icon: 'atom' }),
-          button('+ Soru', () => void ctx.navigate({ name: 'questionForm' }), { class: 'btn-inline', icon: 'question' }),
           button('İçerik', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline', icon: 'content' }),
-          button('İlerleme', () => void ctx.navigate({ name: 'progress' }), { class: 'btn-inline', testid: 'to-progress', icon: 'progress' }),
           button('Veri', () => void ctx.navigate({ name: 'data' }), { class: 'btn-inline', icon: 'data' }),
         ),
       ),

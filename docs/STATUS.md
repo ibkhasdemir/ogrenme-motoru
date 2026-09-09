@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **353 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **354 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 353 test yeşil |
+| Test | 35 dosya / 354 test yeşil |
 | Kaynak | 67 TypeScript dosyası, ~4.700 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
@@ -226,7 +226,14 @@ Kullanıcı: *"renk paletini koyulaştırman lazım, daha güzel semboller kulla
 
 Ölçüm: açık temada en düşük kontrast 4.68:1, koyu temada 6.84:1, yatay taşma 0.
 
-**Kalan:** telefonda Y-26…Y-34.
+### 7.6 Altıncı tur — BL-57 çapalı geçiş + alt çubuğun yeniden kurulması
+Kullanıcı: *"efekt çok amatörce, hepsi aynı şekilde açılıyor"*, *"sağa kaydırıp geri gelince alt taraf baştaki öğelere dönüyor"*, *"iğrenç alt taraf"*, *"3 taraftan sadece olmaz ki, ara yerden basınca neresinden ölçekleyecek?"*
+
+- **Geçiş dokunulan NOKTAYA çapalandı.** Eski kabuk kutudan kutuya interpolasyon yapıyordu; nereye basılırsa basılsın aynı hareket çıkıyordu. Yeni kabuk ekran boyunda, `transform-origin` parmağın tam pikseli, küçükten büyüğe ölçekleniyor → hareket o noktadan çapraz yayılıyor. **Üç köşe/durum yok; çapa sürekli bir koordinat**, ara noktaların ayrı kuralı da yok. Cam kenarı ölçekle incelmesin diye karşı-ölçekleniyor (`border-width` ≈ 1/ölçek).
+- **Alt çubuğun asıl kusuru biçimsel değildi: yedi düğme sığmıyordu** (390 px ekranda 446 px istiyordu). `07` §6'nın "en fazla dört alan" kuralına inildi: Yakala · Kutu · İçerik · Veri, simge üstte etiket altta, kaydırma yok. **+ Atom / + Soru İçerik ekranına**, **İlerleme** sayıların altına taşındı.
+- **Bildirilen hata:** kaydırılan çubuk her yeniden çizimde başa dönüyordu (`scrollLeft` korunmuyordu — odak ve açık paneller için yapılan koruma çubuk için yapılmamıştı). `captureScroll`/`restoreScroll` eklendi.
+
+**Kalan:** telefonda Y-26…Y-35.
 
 ### 7.1 Sıradaki iş adayları
 Kullanıcı yeni bir yön vermezse §4.2'deki büyük adaylardan biri seçilir. Görsel tarafta bir sonraki doğal adım **semantik metin vurgusu** (`14` §5): `renderText(text, spans?)` zaten tek geçiş noktası, tarih/istisna/kişi vurgusu oradan eklenebilir. Spec revizyonu gerektirmez ama içerik varlığına isteğe bağlı sunum notu ekler; önce `BLOCKERS.md`'ye yazılmalı.

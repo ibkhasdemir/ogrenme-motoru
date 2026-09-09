@@ -77,7 +77,7 @@
   --elev-2: 0 2px 6px rgba(22, 23, 26, 0.07), 0 24px 48px -24px rgba(22, 23, 26, 0.34);
 
   /* --- motion (§7) --- */
-  --motion-fast: 140ms; --motion-base: 220ms; --motion-screen: 420ms; --motion-settle: 300ms;
+  --motion-fast: 140ms; --motion-base: 220ms; --motion-screen: 460ms; --motion-settle: 320ms;
   --motion-easing: cubic-bezier(0.2, 0, 0, 1);
 
   --touch-target: 48px;
@@ -281,7 +281,7 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
    bulanıklığın gösterecek bir şeyi olsun (aksi hâlde cam, sabit zemin üstünde yalnız bir çerçevedir). */
 .nav-bar {
   display: flex; gap: var(--space-1); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
-  max-width: 100%;
+  width: 100%; max-width: 420px; margin-inline: auto; /* ortada yüzen ada; dört alan eşit paylaşır */
   position: sticky; bottom: max(var(--space-1), env(safe-area-inset-bottom));
   padding: var(--space-1);
   border-radius: var(--radius-pill);
@@ -292,8 +292,17 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
 }
 @supports not (backdrop-filter: blur(1px)) { .nav-bar { background: var(--color-surface-elevated); } }
 .nav-bar::-webkit-scrollbar { display: none; }
-/* Çubuğun içindeki düğmeler kendi yüzeyini taşımaz: cam kabuk zaten yüzeydir */
-.nav-bar > .btn { flex: 0 0 auto; white-space: nowrap; padding-inline: var(--space-4); background: transparent; border-color: transparent; box-shadow: none; }
+/* Çubuğun içindeki düğmeler kendi yüzeyini taşımaz (cam kabuk zaten yüzeydir) ve SİMGE ÜSTTE, etiket altta durur:
+   yan yana dizilişte dört düğme 390 px'e sığmıyordu (446 px isteyip yana kayıyordu). Dikey dizilişte hem sığar,
+   hem dokunma hedefi büyür, hem de sekme çubuğu gibi okunur. */
+.nav-bar > .btn {
+  flex: 1 1 0; min-width: 0; white-space: nowrap;
+  flex-direction: column; justify-content: center; gap: 2px;
+  padding: var(--space-2) var(--space-2); min-height: 56px;
+  font-size: var(--type-micro); font-weight: var(--weight-medium); text-align: center;
+  background: transparent; border-color: transparent; box-shadow: none;
+}
+.nav-bar > .btn > .icon { width: 22px; height: 22px; }
 .nav-bar > .btn:active { background: color-mix(in srgb, var(--color-text-primary) 9%, transparent); }
 .nav-badge { margin-left: var(--space-2); padding: 1px var(--space-2); border-radius: var(--radius-pill); background: var(--color-accent); color: var(--color-accent-contrast); font-size: var(--type-micro); font-weight: var(--weight-semibold); }
 
@@ -380,7 +389,7 @@ details.group[open] > .group-body { animation: group-open var(--motion-base) var
 /* Kabuk CAMDIR (iOS 26 dili): arkasındaki sayfa bulanık geçer, kenarında ışık halkası vardır, içeride üst parıltı.
    Rengi dokunulan tuştan gelir ama YARI SAYDAM karışır (`--shell-tint`), böylece büyürken ekranı boyamaz. */
 .morph-shell {
-  position: fixed; z-index: 9; pointer-events: none;
+  position: fixed; z-index: 9; pointer-events: none; will-change: transform;
   background: color-mix(in srgb, var(--shell-tint, var(--color-surface)) 42%, transparent);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-rim);

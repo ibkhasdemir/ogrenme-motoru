@@ -253,6 +253,19 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Ölçüm (gerçek Chrome): açık temada en düşük oran **4.68:1** (şablon bloğundaki ikincil metin; ilk denemede 4.33 çıktı, `--color-surface-sunken` açıldı), koyu temada **6.84:1**. Yatay taşma 0 px (iki temada). AA her yerde geçildi.
 - Durum: **KAPANDI**. Telefon kontrolü: Y-34.
 
+### BL-57 — Geçiş dokunulan noktaya çapalandı; alt gezinme yeniden kuruldu (2026-09-09)
+- Gözlem (kullanıcı): *"Efekt çok amatörce, **hepsi aynı şekilde açılıyor**. Sol alttan basınca sağ üste doğru, sağ alttan basınca sol üste doğru büyümesi lazım; **ortadaki de ortadan** scale etmeli."* Ardından: *"Sağa kaydırıp geri gelince **alt taraf baştaki öğelere dönüyor**. Liquid glass da değil, **iğrenç** alt taraf. **3 taraftan sadece olmaz ki, ara yerden basınca neresinden ölçekleyecek?**"*
+- **1) Geçiş artık dokunulan NOKTAYA çapalı.** Eski kabuk, tuşun kutusundan ekran kutusuna interpolasyon yapıyordu; nereye basılırsa basılsın aynı "perde yukarı açılıyor" hareketi çıkıyordu. Yeni kabuk ekran boyundadır, `transform-origin` **parmağın tam pikselidir** ve küçükten büyüğe ölçeklenir. Böylece hareket o noktadan çapraz yayılır: sol alttan basılırsa sağ üste, sağ alttan basılırsa sol üste, ortadan basılırsa her yöne eşit.
+  - **"Ara kısımlar" sorusunun cevabı:** üç köşe/durum yok. Çapa sürekli bir koordinattır, dolayısıyla ara noktaların ayrı bir kuralı da yoktur. Gerçek tarayıcıda ölçüldü: dokunuş (30, 690) → çapa `30px 690px`; (1200, 690) → `1200px 690px`; (630, 360) → `630px 360px`.
+  - Cam kenarı ölçekle inceldiği için **karşı-ölçeklenir** (`border-width` ≈ 1/ölçek): görünen kalınlık yol boyunca ~1 px kalır. Aksi hâlde kabuk küçükken kenarı tamamen kayboluyordu.
+  - Süre 460 → **540 ms** ("yavaşça" isteği), ekran geçişi 420 → 460 ms.
+- **2) Alt gezinme çubuğu yeniden kuruldu.** Asıl kusur biçimsel değildi: **yedi düğme tek satıra sığmıyordu** (390 px ekranda 446 px istiyordu), yana kayıyor, sağdakiler kırpılıyordu.
+  - `07` §6 zaten "ileride en fazla dört alan" diyor. Çubuk **dörde indi**: Yakala · Kutu · İçerik · Veri. Simge üstte, etiket altta (sekme çubuğu dizilişi); dördü ekranı eşit paylaşır, **kaydırma yok**, ortada yüzen ada gibi durur.
+  - **+ Atom** ve **+ Soru** İçerik ekranına taşındı (içerik üretme oraya ait). **İlerleme** Bugün sayılarının hemen altına sessiz bir satır oldu.
+- **3) Bildirilen hata: kaydırılan çubuk her yeniden çizimde başa dönüyordu.** Her render DOM'u sıfırdan kurduğu için `scrollLeft` sıfırlanıyordu — odak ve açık paneller için zaten yapılan koruma çubuk için yapılmamıştı. `captureScroll`/`restoreScroll` eklendi. Dört alanla çubuk artık taşmıyor ama büyük sistem yazısında taşabilir; koruma o durumda da geçerli.
+- Testler: kabuk üç farklı dokunuş noktasında **üç farklı çapa** üretir; kabuk ekran boyundadır ve `transform-origin` dokunuş noktasıdır; alt çubuk tam dört alan taşır ve etiketleri `['+ Yakala','Kutu','İçerik','Veri']`'dir. `phase9-ui` testleri yeni akışa göre güncellendi (+ Atom / + Soru artık İçerik'ten açılıyor). Toplam 354 yeşil.
+- Durum: **KAPANDI**. Telefon kontrolü: Y-35.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

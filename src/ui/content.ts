@@ -201,6 +201,8 @@ async function renderList(ctx: AppContext, query: string, archived: boolean): Pr
     h('div', { class: 'row' }, button("← Bugün", () => void ctx.navigate({ name: 'today' }), { variant: 'quiet', class: 'btn-inline' }), h('h1', { class: 'text-title' }, 'İçerik')),
     h('div', { class: 'row' },
       button('İçe aktar', () => void ctx.navigate({ name: 'import' }), { class: 'btn-inline', testid: 'to-import' }),
+      button('+ Atom', () => void ctx.navigate({ name: 'atomForm' }), { class: 'btn-inline', icon: 'atom' }),
+      button('+ Soru', () => void ctx.navigate({ name: 'questionForm' }), { class: 'btn-inline', icon: 'question' }),
       button('Konular', () => void ctx.navigate({ name: 'content', view: { kind: 'topics' } }), { class: 'btn-inline', testid: 'to-topics' }),
       archived
         ? button('← Listeye dön', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline', testid: 'to-active' })

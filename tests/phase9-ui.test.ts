@@ -208,6 +208,7 @@ describe('Phase 9 — UI akışı', () => {
     expect(document.querySelector('.hook-type')!.textContent).toBe('Mantık')
     expect(text()).not.toMatch(/\blogic\b/)
     await click(byText("Bugün'e dön"))
+    await click(byText('İçerik')) // + Atom / + Soru İçerik ekranına taşındı (alt çubuk dörde indi)
     await click(byText('+ Atom'))
     const sel = document.querySelector<HTMLSelectElement>('select')!
     expect([...sel.options].map((o) => o.value)).toEqual([...HOOK_TYPES])
@@ -217,6 +218,7 @@ describe('Phase 9 — UI akışı', () => {
 
   it('E-08 (T9) — soru girişi: 4 alanla Kaydet → hata metni; 5 alanla → kaydedildi', async () => {
     const { repo } = await setup({ withQuestion: false })
+    await click(byText('İçerik'))
     await click(byText('+ Soru'))
     expect(screen()).toBe('question-form')
     const [textIn] = document.querySelectorAll<HTMLTextAreaElement>('textarea')
@@ -294,6 +296,7 @@ describe('Phase 9 — UI akışı', () => {
 
   it('E-20 — soru yüzü zorunlu: Atom ekle prompt boş → hata; dolu → kaydedilir', async () => {
     const { repo } = await setup({ withQuestion: false })
+    await click(byText('İçerik'))
     await click(byText('+ Atom'))
     expect(screen()).toBe('atom-form')
     const inputs = document.querySelectorAll<HTMLInputElement>('input.input')

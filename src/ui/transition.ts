@@ -19,7 +19,7 @@ const POINT_TTL_MS = 1500
 /** animationend gelmezse sınıfın en geç düşeceği süre (motion-base'in birkaç katı). */
 const CLEANUP_MS = 900
 /** kabuk büyümesinin süresi (ms) — ekran geçişinden biraz uzun, çünkü yol da uzun */
-const MORPH_MS = 460
+const MORPH_MS = 540
 
 /** Dokunuş noktasını izlemeye başlar; döndürdüğü işlev dinleyiciyi kaldırır. */
 export function trackTouchOrigin(): () => void {
@@ -76,7 +76,7 @@ function motionReduced(): boolean {
  * Web Animations API; `fill` YOK (BL-50 kuralı: animasyon donarsa/çalışmazsa içerik tam görünür kalır). Bitince ya da
  * emniyet zaman aşımında her şey temizlenir. Kurulamazsa null döner ve çağıran CSS'teki ölçek geçişine düşer.
  */
-function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>): (() => void) | null {
+function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>, point: { x: number; y: number }): (() => void) | null {
   if (typeof el.animate !== 'function' || typeof document === 'undefined' || !document.body) return null
   const elRect = el.getBoundingClientRect()
   if (!(elRect.width > 0 && elRect.height > 0)) return null
@@ -95,25 +95,35 @@ function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>): ((
   scrim.className = 'morph-scrim'
   document.body.appendChild(scrim)
 
+  // Kabuk ekran boyundadır ve DOKUNULAN NOKTAYA çapalanır; küçükten büyüğe ölçeklenince hareket o noktadan
+  // ÇAPRAZ olarak yayılır: sol alttan basılırsa sağ üste doğru, sağ alttan basılırsa sol üste doğru, ortadan
+  // basılırsa her yöne eşit. (Önceki sürüm kutudan kutuya interpolasyon yapıyordu; nereye basılırsa basılsın
+  // aynı "perde yukarı açılıyor" hareketi çıkıyordu.)
+  const originX = Math.min(Math.max(point.x, 0), vw)
+  const originY = Math.min(Math.max(point.y, 0), vh)
+  // Alt sınır: geniş ekranda küçük bir tuş, iğne başı gibi başlamasın (telefonda oran zaten ~0.25 çıkar).
+  const startScale = Math.min(0.6, Math.max(box.width / vw, box.height / vh, 0.12))
   const shell = document.createElement('div')
   shell.setAttribute('aria-hidden', 'true')
   shell.className = 'morph-shell'
-  // Yalnız geometri ve renk satır içi; gölge CSS'te (tuşun kendi zayıf gölgesi büyüyünce kaybolur, kabuğa güçlüsü gerekir).
   shell.style.cssText = [
-    `left:${box.left}px`, `top:${box.top}px`, `width:${box.width}px`, `height:${box.height}px`,
+    'left:0', 'top:0', `width:${vw}px`, `height:${vh}px`,
+    `transform-origin:${originX}px ${originY}px`,
     `border-radius:${box.radius}`,
     ...(box.background ? [`--shell-tint:${box.background}`] : []),
   ].join(';')
   document.body.appendChild(shell)
 
   const easing = 'cubic-bezier(0.2, 0, 0, 1)'
+  // Cam kenarı (rim) da ölçekle inceldiği için karşı-ölçeklenir: görünen kalınlık yol boyunca ~1 px kalır.
+  const rimAt = (scale: number): string => `${Math.min(12, Math.max(1, 1 / scale)).toFixed(2)}px`
+  const midScale = (startScale + 1) / 2
   const shellAnim = shell.animate([
-    { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, borderRadius: box.radius, opacity: 1 },
-    { opacity: 1, offset: 0.5 },
-    { left: '0px', top: '0px', width: `${vw}px`, height: `${vh}px`, borderRadius: '0px', opacity: 0 },
+    { transform: `scale(${startScale})`, borderRadius: box.radius, borderWidth: rimAt(startScale), opacity: 1 },
+    { transform: `scale(${midScale})`, borderWidth: rimAt(midScale), opacity: 1, offset: 0.5 },
     // Kabuk CAM olduğu için sona kadar kalabilir ve orada erir: opak bir renk katmanı ekranı kaplamaz, arkası
-    // bulanık geçer. (Renk dolgusuyken mürekkep düğmede tam ekran siyah bir kare çakması oluyordu, bu yüzden
-    // erkenden eritiliyordu; cam tarifinde o sorun yok.)
+    // bulanık geçer. (Renk dolgusuyken mürekkep düğmede tam ekran siyah bir kare çakması oluyordu.)
+    { transform: 'scale(1)', borderRadius: '0px', borderWidth: '1px', opacity: 0 },
   ], { duration: MORPH_MS, easing })
   const clipAnim = el.animate([
     { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round ${box.radius})`, opacity: 0.55 },
@@ -173,7 +183,7 @@ export function applyScreenTransition(el: HTMLElement, kind: ScreenTransition | 
   // Kabuk kurulabildiyse kabın kendi ölçek animasyonu susar (iki hareket üst üste binmesin). İçeriğin kademeli
   // varışı `.screen-push > *` üzerinden aynen sürer: kabuk açılır, içindekiler sırayla yerine oturur.
   if (kind === 'push' && fresh && fresh.box && !motionReduced()) {
-    morphCleanup = morphFromBox(el, fresh.box)
+    morphCleanup = morphFromBox(el, fresh.box, { x: fresh.x, y: fresh.y })
     if (morphCleanup) el.classList.add('is-morphing')
   }
   let timer: ReturnType<typeof setTimeout> | null = null
