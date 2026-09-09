@@ -4,35 +4,35 @@
 :root {
   color-scheme: light dark;
   /* color */
-  --color-background: #f6f5f1;
+  --color-background: #f3f2ef;
   --color-surface: #ffffff;
   --color-surface-elevated: #ffffff;
-  --color-text-primary: #1c1b19;
-  --color-text-secondary: #5c574f;
-  --color-border: #d6d2c8;
-  --color-accent: #2c5a86;
+  --color-text-primary: #191a1c;
+  --color-text-secondary: #5f6165;
+  --color-border: #e3e1db;
+  --color-accent: #1e4f86;
   --color-accent-contrast: #ffffff;
-  --color-success: #2b6a3d;
-  --color-error: #a2392c;
-  --color-warning: #82540f;
+  --color-success: #1f6438;
+  --color-error: #9c3326;
+  --color-warning: #7a4e0c;
   /* semantik hafıza renkleri (§2, §7) — UI katmanı; domain bilmez */
   --memory-date: #7a4b16;
-  --memory-entity: #2c5a86;
-  --memory-place: #2e6b6a;
-  --memory-cause: #6a4c8f;
-  --memory-consequence: #4d5e2a;
-  --memory-exception: #a2392c;
-  --memory-warning: #82540f;
-  --memory-misconception: #8a2f5b;
-  --memory-confusable: #6a4c8f;
-  --memory-hook: #574289;
-  --memory-source: #4a5870;
-  --state-correct: #2b6a3d;
-  --state-correct-bg: #e4f1e7;
-  --state-incorrect: #a2392c;
-  --state-incorrect-bg: #f7e3df;
-  --state-uncertain: #82540f;
-  --state-uncertain-bg: #f6ecd8;
+  --memory-entity: #1e4f86;
+  --memory-place: #1f6360;
+  --memory-cause: #5e4489;
+  --memory-consequence: #48591f;
+  --memory-exception: #9c3326;
+  --memory-warning: #7a4e0c;
+  --memory-misconception: #862a56;
+  --memory-confusable: #5e4489;
+  --memory-hook: #4e3b83;
+  --memory-source: #45526b;
+  --state-correct: #1f6438;
+  --state-correct-bg: #e7f2ea;
+  --state-incorrect: #9c3326;
+  --state-incorrect-bg: #fae8e4;
+  --state-uncertain: #7a4e0c;
+  --state-uncertain-bg: #f7eeda;
   /* spacing */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-7: 32px; --space-8: 40px;
   /* radius */
@@ -50,7 +50,7 @@
   --weight-regular: 400; --weight-medium: 500; --weight-semibold: 600;
   /* elevation: en fazla iki seviye */
   --elev-0: none;
-  --elev-1: 0 2px 10px rgba(20, 18, 14, 0.10);
+  --elev-1: 0 1px 1px rgba(18, 19, 22, 0.04), 0 8px 24px -14px rgba(18, 19, 22, 0.22);
   /* motion */
   --motion-fast: 140ms; --motion-base: 220ms; --motion-easing: cubic-bezier(0.2, 0, 0, 1);
   --touch-target: 48px;
@@ -59,16 +59,16 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: #151412; --color-surface: #1f1e1b; --color-surface-elevated: #292724;
-    --color-text-primary: #f2efe9; --color-text-secondary: #b4aea4; --color-border: #3a3731;
-    --color-accent: #93b8de; --color-accent-contrast: #0f1418;
+    --color-background: #0f1012; --color-surface: #17181b; --color-surface-elevated: #202226;
+    --color-text-primary: #f0f1f3; --color-text-secondary: #a3a5aa; --color-border: #2b2d32;
+    --color-accent: #8fb9e8; --color-accent-contrast: #0c1219;
     --color-success: #8fd0a0; --color-error: #e89d90; --color-warning: #dbb56d;
-    --memory-date: #d9ab6e; --memory-entity: #93b8de; --memory-place: #86c4c2; --memory-cause: #b8a4e3; --memory-consequence: #b3c68a;
+    --memory-date: #d9ab6e; --memory-entity: #8fb9e8; --memory-place: #86c4c2; --memory-cause: #b8a4e3; --memory-consequence: #b3c68a;
     --memory-exception: #e89d90; --memory-warning: #dbb56d; --memory-misconception: #e096bd; --memory-confusable: #b8a4e3;
     --memory-hook: #b9aae4; --memory-source: #a7b3c9;
-    --state-correct: #8fd0a0; --state-correct-bg: #1d3325; --state-incorrect: #e89d90; --state-incorrect-bg: #3b2320;
-    --state-uncertain: #dbb56d; --state-uncertain-bg: #3a2f18;
-    --elev-1: 0 2px 12px rgba(0, 0, 0, 0.45);
+    --state-correct: #8fd0a0; --state-correct-bg: #172c1f; --state-incorrect: #e89d90; --state-incorrect-bg: #331e1b;
+    --state-uncertain: #dbb56d; --state-uncertain-bg: #322815;
+    --elev-1: 0 1px 1px rgba(0, 0, 0, 0.5), 0 10px 28px -16px rgba(0, 0, 0, 0.85);
   }
 }
 @media (prefers-reduced-motion: reduce) { :root { --motion-fast: 0ms; --motion-base: 0ms; } }
@@ -79,8 +79,7 @@ html { -webkit-text-size-adjust: 100%; }
 html, body { margin: 0; padding: 0; background: var(--color-background); color: var(--color-text-primary); font-family: var(--font-sans); font-size: 100%; line-height: var(--lh-body); }
 body { min-height: 100dvh; }
 #app { min-height: 100dvh; display: flex; flex-direction: column; padding: max(var(--space-4), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right)) calc(var(--space-6) + env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left)); max-width: 640px; margin: 0 auto; }
-.screen { display: flex; flex-direction: column; gap: var(--space-4); flex: 1; animation: screen-in var(--motion-base) var(--motion-easing); }
-@keyframes screen-in { from { opacity: 0; } to { opacity: 1; } }
+.screen { display: flex; flex-direction: column; gap: var(--space-4); flex: 1; }
 .screen-bottom { margin-top: auto; display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); }
 :focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
 
@@ -285,3 +284,66 @@ textarea.input { min-height: 96px; line-height: var(--lh-body); }
 
 /* Hiçbir ekran yatay kaymaz; taşma varsa kendi kabında kaydırılır (14 §12) */
 body { overflow-x: hidden; }
+
+/* ============================================================================
+   BL-50 "premium" tur — 14 §1 sıralaması korunur (öğrenilebilirlik > okunabilirlik > ergonomi > estetik > süs).
+   Üç iş: (a) geçiş hareketi yön duygusu verir, (b) yüzeyler daha sakin ve derin, (c) dokunuş her yerde cevap verir.
+   Yeni semantik kavram YOK; ham hex yalnız yukarıdaki :root bloklarında (11 kural 38).
+   ========================================================================== */
+
+/* (a) Ekran geçişi — sınıfları transition.ts ekler, animasyon bitince kaldırır.
+   push: dokunulan noktadan büyüyerek açılır (iOS uygulama açılışı hissi). Nokta bilinmiyorsa ekranın üst-ortası.
+   pop:  geri gidiş; hafifçe uzaklaşarak gelir, böylece "geri geldim" duygusu ileriyle karışmaz.
+   fade: aynı ekranın bir sonraki adımı (soru → güven → sonuç); yalnız belirme (14 §14 "cevap geri bildirimi"). */
+/* animation-fill-mode BİLEREK yok: animasyon hiç başlamaz ya da (sekme boyanmazken) donarsa öğe kendi doğal
+   hâlinde — tam görünür — kalır. Hareketin bozulması içeriği asla gizlememeli (§1 okunabilirlik > süs). */
+.screen-push { animation: screen-push var(--motion-base) var(--motion-easing); transform-origin: var(--origin-x, 50%) var(--origin-y, 38%); }
+.screen-pop { animation: screen-pop var(--motion-base) var(--motion-easing); transform-origin: 50% 38%; }
+.screen-fade { animation: screen-fade var(--motion-fast) var(--motion-easing); }
+@keyframes screen-push { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes screen-pop { from { opacity: 0; transform: scale(1.035); } to { opacity: 1; transform: none; } }
+@keyframes screen-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* §14: azaltılmış hareket tercihi tüm geçişi kapatır — içerik anında ve tam görünür olur */
+@media (prefers-reduced-motion: reduce) {
+  .screen-push, .screen-pop, .screen-fade { animation: none; }
+}
+
+/* (b) Yüzey ve derinlik: tek vurgulu sakin zemin. Kart kenarı incelir, gölge iki katmanlı ve yumuşaktır;
+   yükselti hâlâ iki seviye (§7) — kart ve çubuk aynı elev-1'i paylaşır, süs gölge yok. */
+.card { border-color: color-mix(in srgb, var(--color-border) 82%, transparent); }
+.count { border-color: color-mix(in srgb, var(--color-border) 82%, transparent); }
+.undo-bar { border-color: color-mix(in srgb, var(--color-border) 82%, transparent); }
+
+/* Yapışkan başlık: içerik altından geçerken zemin cam gibi kalır (iOS alışkanlığı, §16).
+   backdrop-filter desteklenmezse arkaplan yine de opak okunur kalır. */
+.screen > .row:first-child { background: color-mix(in srgb, var(--color-background) 80%, transparent); backdrop-filter: saturate(180%) blur(14px); -webkit-backdrop-filter: saturate(180%) blur(14px); }
+@supports not (backdrop-filter: blur(1px)) { .screen > .row:first-child { background: var(--color-background); } }
+
+/* Birincil eylem: gölge vurgu renginden beslenir, düğme zeminden ayrılır ama parlamaz */
+.btn-primary { box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04), 0 10px 22px -14px color-mix(in srgb, var(--color-accent) 85%, transparent); }
+
+/* Gezinme düğmeleri kapsül: alt çubuk satır hâlinde daha hafif okunur (§13 ergonomi) */
+.nav-bar > .btn { border-radius: 999px; padding-inline: var(--space-4); }
+
+/* (c) Dokunuş geri bildirimi: her dokunulabilir yüzey bastırıldığını gösterir; süre motion-fast, reduced-motion'da sıfır */
+.btn:active { transform: scale(0.98); }
+.btn-primary:active { transform: scale(0.98); box-shadow: none; }
+.option { transition: background var(--motion-fast) var(--motion-easing), border-color var(--motion-fast) var(--motion-easing), transform var(--motion-fast) var(--motion-easing); }
+.option:active { transform: scale(0.995); }
+.chip { transition: background var(--motion-fast) var(--motion-easing), border-color var(--motion-fast) var(--motion-easing), transform var(--motion-fast) var(--motion-easing); -webkit-tap-highlight-color: transparent; }
+.chip:active { transform: scale(0.97); }
+.list-item { -webkit-tap-highlight-color: transparent; }
+details.group > summary.group-summary { -webkit-tap-highlight-color: transparent; transition: background var(--motion-fast) var(--motion-easing); border-radius: var(--radius-sm); }
+details.group > summary.group-summary:active { background: color-mix(in srgb, var(--color-text-primary) 6%, transparent); }
+
+/* Seçim rengi vurguyla aynı aileden; okunurluğu bozmaz */
+::selection { background: color-mix(in srgb, var(--color-accent) 22%, transparent); }
+
+/* Bildirim şeridi: kalın renk slabı yerine aynı anlamın çok hafif zemin tonu + ince kenar çizgisi.
+   Anlam taşıyıcısı hâlâ tek başına renk değil (§9): kenar çizgisi + metin + (hata/uyarı için) sözcük birlikte. */
+.notice { border-left-width: 3px; background: color-mix(in srgb, var(--memory-warning) 6%, var(--color-surface)); }
+.notice-error { background: color-mix(in srgb, var(--color-error) 7%, var(--color-surface)); }
+.notice-ok { background: color-mix(in srgb, var(--color-success) 7%, var(--color-surface)); }
+
+/* Koyu modda vurgu renkli gölge "parlama" gibi görünür (§14 süs yasağı): birincil düğme normal yükseltiye döner. */
+@media (prefers-color-scheme: dark) { .btn-primary { box-shadow: var(--elev-1); } }

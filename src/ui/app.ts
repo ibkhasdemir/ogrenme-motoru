@@ -18,6 +18,7 @@ import type { UpdateController } from '../pwa/register'
 import type { AiService } from '../platform/ai'
 import type { AiSettingsStore } from '../app/aiSettings'
 import { emptyAiState, type AiSectionState } from './dataAi'
+import { applyScreenTransition, trackTouchOrigin, type ScreenTransition } from './transition'
 
 export type Screen =
   | { name: 'today' }
@@ -95,6 +96,13 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
 
   // Geri hareketi (BL-45): her ekran geçişi tarayıcı geçmişine yazılır. iOS ana ekran uygulamasında kenardan kaydırma ve
   // Android'de donanım geri tuşu bunu kullanır; ayrıca ekranın üstündeki "←" hep yapışık durur.
+  // Geçiş animasyonu (14 §14): yön duygusu. İleri gidiş dokunulan noktadan büyür, geri gidiş küçülerek gelir, aynı
+  // ekranın adımları yumuşak belirir. Aynı ekranın yeniden çizimi (yazarken) sessizdir — bu yüzden anahtarla karşılaştırılır.
+  const untrackTouch = trackTouchOrigin()
+  let poppedTransition = false
+  let lastPushKey = 'today'
+  let lastFadeKey = ''
+
   const stack: Screen[] = [{ name: 'today' }]
   let depth = 1 // geçmişteki konumumuz (history.state.motorDepth ile aynı); ileri gitme bunu artırır
   let popping = false
@@ -158,6 +166,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       if (STUDY_SCREENS.has(screen.name)) { session = null; undoBar = null } // yarım cevap kaydedilmez (07 §1.1)
       depth = target
       screen = stack[depth - 1] ?? { name: 'today' as const }
+      poppedTransition = true
       void render()
     } finally {
       popping = false
@@ -256,6 +265,26 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     }
   }
 
+  // --- geçiş anahtarları ---
+  // pushKey: "başka bir yere gittim" (ekran değişti ya da İçerik içinde bir kademe indim) → büyüyerek açılır.
+  // fadeKey: aynı ekranın bir sonraki adımı (soru → güven → sonuç) → yumuşak belirir. İkisi de aynıysa animasyon yok.
+  function pushKey(s: Screen): string {
+    return s.name === 'content' ? `content:${s.view.kind}` : s.name
+  }
+  function fadeKey(s: Screen): string {
+    if (s.name === 'question' || s.name === 'recall') return `${s.name}:${s.phase}`
+    return pushKey(s)
+  }
+  function nextTransition(): ScreenTransition | null {
+    const pk = pushKey(screen)
+    const fk = fadeKey(screen)
+    const kind: ScreenTransition | null = poppedTransition ? 'pop' : pk !== lastPushKey ? 'push' : fk !== lastFadeKey ? 'fade' : null
+    lastPushKey = pk
+    lastFadeKey = fk
+    poppedTransition = false
+    return kind
+  }
+
   // --- render ---
   async function render(): Promise<void> {
     const seq = ++renderSeq
@@ -284,6 +313,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       ))
     } else if (undoBar && !tokenAlive(undoBar.token)) undoBar = null
     root.appendChild(el)
+    applyScreenTransition(el, nextTransition())
     restoreOpenPanels(openPanels)
     restoreFocus(savedFocus)
   }
@@ -599,6 +629,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     destroy() {
       if (historyOk) window.removeEventListener('popstate', onPopState)
       if (undoTimer) clearTimeout(undoTimer)
+      untrackTouch()
       unsubscribeUpdates?.()
       clear(root)
     },

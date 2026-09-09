@@ -81,6 +81,10 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | Y-23 | Yapay zekâ ile üret | İçe aktar → notu yapıştır → "Yapay zekâ ile üret" → önizleme gelir; Ekle demeden hiçbir şey eklenmez | ☐ | |
 | Y-24 | Yedek + yapay zekâ | yedek al → dosyada API anahtarı GEÇMEZ (dosyayı açıp arayarak doğrula) | ☐ | |
 | Y-25 | Yatay taşma | hiçbir ekran yana kaymaz (Bugün, İçerik, Veri, çalışma ekranları) | ☐ | |
+| Y-26 | Ekran geçişi (BL-50) | bir düğmeye/karta basınca yeni ekran **o noktadan** büyüyerek açılır; kenardan geri kaydırınca uzaklaşarak gelir; hiçbir geçişte ekran boş/yarı saydam takılı kalmaz | ☐ | |
+| Y-27 | Aramada yanıp sönme yok | İçerik → arama kutusuna yazarken ekran her tuşta yeniden belirmez, klavye kapanmaz | ☐ | |
+| Y-28 | Palet (açık/koyu) | iOS Ayarlar → Görünüm ile ikisi de denenir: metin her yerde rahat okunur, doğru/yanlış/uyarı renkleri hâlâ ayırt edilir, koyu modda parlama yok | ☐ | |
+| Y-29 | Azaltılmış hareket | iOS Ayarlar → Erişilebilirlik → Hareket → "Hareketi Azalt" açıkken geçiş animasyonu **hiç** olmaz, ekranlar anında ve tam görünür gelir | ☐ | |
 | Y-10 | Atom ekranı → Çengel ekle | kendi kodlaman kaydedilir, kartta "Çengeli göster" ile çıkar; aynı metin ikinci kez "zaten var" | ☐ | |
 
 ## 4. Notlar

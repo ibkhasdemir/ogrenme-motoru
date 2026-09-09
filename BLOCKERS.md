@@ -153,6 +153,21 @@ Hepsi düzeltildi; gerileme testleri `tests/phase19-audit3.test.ts`.
 7. İlerleme ekranında arşivli atomlar özette/listelerde sayılıp konu toplamlarında sayılmıyordu. Ekranın tamamı artık yalnız arşivlenmemiş atomları sayar; başlık bunu söyler.
 Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek, kurtarma dökümü, DOM, hata mesajları temiz).
 
+### BL-50 — "Premium" görsel tur: geçiş hareketi, palet, dokunma geri bildirimi (2026-09-09)
+- Bölüm: `14` §1 (öncelik sırası), §7 (token), §8 (light/dark), §9 (kontrast AA), §14 (hareket), §16 (modern mobil his), §18 (palet kuralı); `10` §1 (kopya tema / süs animasyon yasağı); `11` kural 38 (ham hex yalnız `:root`).
+- Gözlem (2026-09-09): kullanıcı BL-48'den sonra da "biraz makyaj yapalım, UX daha premium dursun, şu an eğreti duruyor", "bir yere basınca iOS'un uygulama açma efekti gibi büyüterek gelsin", "renk paleti daha premium bir şey olabilir" dedi.
+- Yapılan (üç iş, hiçbiri yeni semantik kavram eklemez):
+  1. **Geçiş hareketi** (`src/ui/transition.ts` + `.screen-push/pop/fade`): son dokunulan nokta izlenir; ileri gidişte yeni ekran **o noktadan** büyüyerek açılır (`transform-origin` = dokunuş, `scale(0.92) → 1`), geri gidişte hafifçe uzaklaşarak gelir, aynı ekranın adımı (soru → güven → sonuç) yalnız belirir. View Transitions API iOS Safari'de güvenilir olmadığı için el ile yapıldı.
+     - Önemli davranış değişikliği: eski `screen-in` animasyonu **her render'da** çalışıyordu (arama kutusuna her tuşta ekran yanıp sönüyordu). Artık animasyon yalnız gerçek geçişte çalışır; ekran anahtarı aynıysa sessizdir.
+     - Güvenlik kuralı: geçiş kuralları `animation-fill-mode` **kullanmaz** ve `animationend` gelmezse sınıfı düşüren bir zaman aşımı vardır. Sebep: sekme boyanmazken animasyon zaman çizgisi donuyor; `fill: both` ile ekran `opacity: 0`'da kilitli kalıyordu (gerçek tarayıcıda gözlendi). Hareket bozulursa içerik **tam görünür** kalır (§1: okunabilirlik > süs).
+     - `prefers-reduced-motion` üç geçişi de kapatır (§14).
+  2. **Palet**: sıcak bej/tan zemin → daha nötr, daha derin bir sistem. Açık: zemin `#f3f2ef`, kenar `#e3e1db` (eski tan kenar kalın ve mat duruyordu), mürekkep metin, vurgu `#1e4f86`. Koyu: zemin `#0f1012`, yüzey `#17181b`, yükseltilmiş `#202226`, vurgu `#8fb9e8`. Semantik rollerin **anlamı ve ailesi** korundu (doğru yeşil, yanlış kırmızı, uyarı amber, çengel mor); yalnız derinlik/doygunluk yeni zemine göre ayarlandı. Yükselti tek katmanlı gölge yerine iki katmanlı yumuşak gölge (hâlâ iki seviye: `elev-0`, `elev-1`).
+     - Ölçüldü (gerçek Chrome, `getComputedStyle` + WCAG formülü): açık temada tüm metin/zemin çiftleri **≥ 5.5:1**, koyu temada **≥ 7.1:1**; 11 semantik hafıza rengi + üç durum rengi kendi zeminlerinde dâhil. AA (4.5:1) her yerde aşıldı. Yatay taşma 0 px (iki temada).
+  3. **Dokunma ve derinlik**: düğme/çip/seçenek/özet satırlarında basılı geri bildirim, gezinme düğmeleri kapsül, yapışkan başlıkta cam zemin (`backdrop-filter`; desteklenmezse opak zemine düşer), birincil düğmede vurgu renginden beslenen yumuşak gölge (koyu modda "parlama" olmasın diye normal yükseltiye döner), bildirim şeridinde kalın renk slabı yerine çok hafif zemin tonu + ince çizgi.
+- Sınırlar: pixel-perfect Apple kopyası yok, tema seçeneği yok, süs animasyonu yok; çalışma ekranlarında yerleşim değişmedi (§11 görsel hafıza istikrarı). Ölçüm modu ↔ öğrenme modu ayrımı (§3, §10) aynen duruyor: seçenekler cevap açılmadan renk almaz.
+- Spec revizyonu gerekmedi: `14` rol adları ve token adları değişmedi, yalnız değerleri değişti (§2 son cümlesi bunu açıkça serbest bırakıyor). `.screen-push/pop/fade` §14'ün "kart geçişi / yeni içeriğin açılması" kalemine girer.
+- Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (12 test). Telefon kontrolü: `docs/PHONE_CHECK.md` Y-26…Y-29.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

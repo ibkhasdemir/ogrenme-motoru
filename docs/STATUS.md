@@ -1,13 +1,13 @@
 # STATUS.md — Proje durum raporu
 
 > **Yeni oturum buradan başlar.** Sırasıyla oku: bu dosya → `BLOCKERS.md` §1 (karar bekleyenler) → `docs/PHONE_CHECK.md` (telefon bulguları ve bekleyen kontroller) → `README.md` (kullanım) → gerekiyorsa `docs/spec/` (değiştirilmez).
-> Son güncelleme: **2026-09-09**. Bu dosyayı her önemli turun sonunda güncelle.
+> Son güncelleme: **2026-09-09** (premium görsel tur sonrası). Bu dosyayı her önemli turun sonunda güncelle.
 
 ---
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **329 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **341 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,8 +15,8 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 34 dosya / 329 test yeşil |
-| Kaynak | 65 TypeScript dosyası, ~4.500 satır |
+| Test | 35 dosya / 341 test yeşil |
+| Kaynak | 66 TypeScript dosyası, ~4.600 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
 ---
@@ -63,7 +63,7 @@ Gerçek iPhone kullanımından çıkanlar (`docs/PHONE_CHECK.md` §6'da F-1…F-
 | **BL-46** | **Kaydırıp arşivle / arşiv görünümü / koşullu kalıcı silme** | Kalıcı silme yalnız hiç ölçülmemiş, sorusu ve başka bağı olmayan atomda |
 | **BL-47** | **Okuma → ilk deneme boşluğu** — en az 2 öğe ya da 2 dk | Kullanıcı "konu veriyor hemen ardından soru" dedi; oturum penceresi, scheduler kararı değil |
 
-Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk) ve **BL-48** (görsel cila + yatay taşma düzeltmesi).
+Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk), **BL-48** (görsel cila + yatay taşma düzeltmesi) ve **BL-50** (premium tur: dokunulan noktadan açılan ekran geçişi, yeni palet, dokunma geri bildirimi).
 
 ### 2.5 Bağımsız denetimler — 3 tur, 20 gerçek hata
 Her tur: ayrı bir ajan spec'i okur, kodu inceler, iddiaları repoda koşturur; bulunan her hata için gerileme testi yazıldı.
@@ -86,7 +86,7 @@ src/app/         uygulama katmanı: motor.ts (cephe), backup.ts, restore.ts, rec
                  contentImport.ts, aiImport.ts, aiSettings.ts, clockSkew.ts
 src/store/       repository.ts (arayüz) + memory/ + dexie/ (şema, migration) + recovery/
 src/platform/    services.ts (Clock, IdGenerator, HashService, BackupFileService) + ai.ts + web/
-src/ui/          app.ts (ekran makinesi + gezinme + odak koruma), content.ts, contentImport.ts,
+src/ui/          app.ts (ekran makinesi + gezinme + odak koruma), transition.ts (ekran geçişi), content.ts, contentImport.ts,
                  capture.ts, progress.ts, data*.ts, forms.ts, dom.ts, labels.ts, styles.css
 src/pwa/         register.ts (SW kaydı, güncelleme denetimi)
 public/sw.js     service worker (build başına tam ön-önbellek)
@@ -174,20 +174,20 @@ Kullanıcı haklı olarak sordu: repo public, risk var mı?
 
 ---
 
-## 7. Sıradaki iş — "premium" görsel tur (kullanıcı isteği, 2026-09-09)
+## 7. "Premium" görsel tur — YAPILDI (2026-09-09)
 
-Kullanıcının kendi cümleleri: *"biraz makyaj yapalım, UX daha premium dursun, şu an eğreti duruyor"*, *"bir yere basınca iOS'un uygulama açma efekti gibi büyüterek gelsin"*, *"renk paleti daha premium bir şey olabilir"*. Kendisi bunun spec'in sonraki turlarının işi olduğunu biliyor ama **şimdi görmek istiyor**.
+Kullanıcının cümleleri: *"biraz makyaj yapalım, UX daha premium dursun, şu an eğreti duruyor"*, *"bir yere basınca iOS'un uygulama açma efekti gibi büyüterek gelsin"*, *"renk paleti daha premium bir şey olabilir"*. Üçü de yapıldı; ayrıntı ve gerekçe `BLOCKERS.md` **BL-50**'de.
 
-Yapılacaklar (yeni oturumda):
-1. **Ekran geçiş animasyonu.** Şu an yalnız `screen-in` opaklık geçişi var (`styles.css`). İstenen: dokunulan öğeden büyüyerek açılan iOS tarzı geçiş. Uygulanabilir yol: dokunulan elemanın `getBoundingClientRect`'i alınıp yeni ekranın `transform: scale + translate` ile o noktadan açılması (View Transitions API iOS Safari'de henüz güvenilir değil, elle yapmak gerekir). **`prefers-reduced-motion` mutlaka kapatmalı** (`14` §14).
-2. **Renk paleti.** Şu an sıcak bej/lacivert. Daha "premium" bir yön: koyu modda daha derin nötr zemin + tek bir doygun vurgu; açık modda daha yüksek kontrastlı kâğıt tonu. **Kural: ham hex yalnız `styles.css` `:root` bloklarında** (`11` kural 38), bileşenler token adı bilir. Semantik renklerin (doğru/yanlış/uyarı/çengel) anlamı korunmalı, kontrast AA (`14` §9).
-3. **Dokunma geri bildirimi ve derinlik.** Kart/liste basılı hâli, birincil düğmede daha belirgin yükselti, ince ayırıcılar.
-4. **Sınırlar.** `10` §1: pixel-perfect Apple kopyası, onlarca tema, süs animasyon YASAK. `14` §1 önceliği: öğrenilebilirlik > okunabilirlik > ergonomi > estetik > süs. Yani cila okunabilirliği bozmayacak, çalışma ekranında dikkat dağıtmayacak.
-5. Bittiğinde `BLOCKERS.md`'ye **BL-50** olarak yaz (spec `14` revizyonu gerekiyorsa not düş) ve telefon kontrol listesine bir madde ekle.
+1. **Ekran geçişi.** `src/ui/transition.ts`: son dokunulan nokta izlenir, yeni ekran o noktadan büyüyerek açılır (`screen-push`), geri gidiş uzaklaşarak gelir (`screen-pop`), aynı ekranın adımı yalnız belirir (`screen-fade`). Eski `screen-in` **her render'da** çalışıyordu (aramada her tuşta yanıp sönme); artık yalnız gerçek geçişte.
+2. **Palet.** Sıcak bej/tan → nötr-derin sistem; vurgu `#1e4f86` (koyu modda `#8fb9e8`). Semantik rollerin anlamı ve ailesi korundu. Kontrast gerçek Chrome'da ölçüldü: açık temada ≥ 5.5:1, koyu temada ≥ 7.1:1; yatay taşma 0 px.
+3. **Dokunma ve derinlik.** Basılı geri bildirim, kapsül gezinme düğmeleri, cam yapışkan başlık, iki katmanlı yumuşak gölge, hafif zeminli bildirim şeridi.
 
-Kullanıcının 2026-09-09 durum bildirimi: yedek **alındı**, yapay zekâ **düzgün çalışıyor**, site telefonda **çalışıyor**.
+**Bu turun en önemli dersi (tekrarlanmaması için):** geçiş kurallarında `animation-fill-mode: both` KULLANILMAZ. Gerçek tarayıcıda gözlendi: sekme boyanmazken animasyonun zaman çizgisi donuyor, `fill: both` ile ekran `opacity: 0`'da kilitli kalıyordu — yani hareketin bozulması içeriği gizliyordu. Artık fill yok, üstüne `animationend` gelmezse sınıfı düşüren zaman aşımı var. `tests/phase20-visual-polish.test.ts` bu kuralı statik olarak da bekçiliyor.
 
----
+**Kalan:** telefonda Y-26…Y-29 (geçiş, aramada yanıp sönme, açık/koyu palet, "Hareketi Azalt").
+
+### 7.1 Sıradaki iş adayları
+Kullanıcı yeni bir yön vermezse §4.2'deki büyük adaylardan biri seçilir. Görsel tarafta bir sonraki doğal adım **semantik metin vurgusu** (`14` §5): `renderText(text, spans?)` zaten tek geçiş noktası, tarih/istisna/kişi vurgusu oradan eklenebilir. Spec revizyonu gerektirmez ama içerik varlığına isteğe bağlı sunum notu ekler; önce `BLOCKERS.md`'ye yazılmalı.
 
 ## 8. Sürüm ve veri güvenliği notları
 - Yedek dosyası: tüm içerik + ham öğrenme geçmişi + soru sürümleri + config, SHA-256 sağlama toplamıyla. **API anahtarı yedeğe girmez** (localStorage'da).
