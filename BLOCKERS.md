@@ -212,6 +212,19 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Ders: **kap düzeyinde animasyon temizliği yaparken hedef kontrolü şart.** İçeriye bir gün animasyon eklendiğinde sessizce bozulur; hata animasyonu ekleyen turda değil, temizliği yazan turda doğmuştur.
 - Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (17).
 
+### BL-54 — Kabuk büyümesi (basılan tuş ekrana dönüşür) + gezinme simgeleri (2026-09-09)
+- Bölüm: `14` §14 (hareket: "yeni içeriğin açılması", "sheet/modal"), §16 (modern mobil his), §9 (simge tek taşıyıcı değildir), §17; `10` §1 (kopya tema / süs animasyon sınırı).
+- İstek (kullanıcının kendi cümlesi): *"alttaki yakala kutu falan tuşlar var ya, o tuş alttan ortaya doğru büyüyerek hareket edecek, sonra içi açılacak içindekiler gelecek. Butonları farklı tür simgeleştirebiliriz, o simgenin içi açılıp ekrana gelebilir."* BL-50/52'deki geçiş yalnız dokunulan NOKTADAN ölçekliyordu; tuşun kendisi harekete katılmıyordu.
+- Yapılan — **kabuk büyümesi** (container transform), iki parça birlikte:
+  1. Dokunulan tuşun boş bir kopyası ("kabuk") tuşun tam kutusundan, tam yarıçapından, tam renginden başlayıp ekranı kaplayacak biçimde büyür; yolun **%72'sinde tamamen erir**. Erken erime bilinçli: mürekkep birincil düğmede kabuk sonuna kadar opak kalsaydı tam ekran siyah bir kare çakması olurdu.
+  2. Yeni ekran aynı kutudan açılan **yuvarlak dikdörtgenle** (`clip-path: inset(... round R)`) ortaya çıkar — "içi açılır, içindekiler gelir". İçeriğin kademeli varışı (BL-52) aynen sürer, böylece kabuk açılırken içindekiler sırayla yerine oturur.
+  - Kabuk kurulduğunda kabın kendi ölçek animasyonu susar (`.screen-push.is-morphing { animation: none }`) — iki hareket üst üste binmez.
+  - Dokunulan kutu, `pointerdown` anında en yakın `button / a / [role=button] / .list-item / .chip` atasından okunur. Yani yalnız alt gezinme değil, **liste satırından atom ekranına geçiş de** aynı biçimde açılır.
+- **Güvenlik kuralları (BL-50/BL-53 dersleri uygulandı):** Web Animations API kullanılır, `fill` YOKTUR (animasyon donarsa/çalışmazsa içerik tam görünür kalır); kabuk `aria-hidden` ve `pointer-events: none`'dır; bitişte ve emniyet zaman aşımında mutlaka silinir (geride görünmez bir katman kalsa dokunmayı engellerdi); `prefers-reduced-motion` açıkken kabuk **hiç kurulmaz**; `Element.animate` yoksa (eski tarayıcı) sessizce CSS'teki ölçek geçişine düşülür.
+- **Gezinme simgeleri:** yedi gezinme düğmesine tek aileden simge eklendi (24×24 kutu, 1.6 çizgi, yuvarlak uç, `currentColor`) — `src/ui/icons.ts`. Simge **etiketin yerine geçmez**, önüne gelir: `14` §9 "renk/simge asla tek taşıyıcı değildir" kuralı ve ekran okuyucu için metin durur; `aria-hidden` olduklarından `textContent` yalnız etiketi verir, testler etkilenmez.
+- Testler: `tests/phase20-visual-polish.test.ts` — kabuk basılan tuşun kutusunda kurulur; animasyon bitince silinir; azaltılmış harekette hiç kurulmaz; kutu bilinmiyorsa (klavyeyle tık) CSS geçişine düşer; uygulama kapanınca geride kalmaz; her gezinme düğmesinde simge var ama etiket de duruyor. Toplam 352 yeşil.
+- Durum: **KAPANDI**. Telefon kontrolü: Y-33.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

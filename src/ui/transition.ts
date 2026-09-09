@@ -5,12 +5,21 @@
 
 export type ScreenTransition = 'push' | 'pop' | 'fade'
 
-/** Son dokunuş noktası (viewport koordinatı). Geçiş bundan sonra gelirse büyüme merkezi burasıdır. */
-let lastPoint: { x: number; y: number; at: number } | null = null
+/** Dokunulan öğenin kimliği: nokta + kutusu + görünümü. Geçiş bundan sonra gelirse ekran BU KUTUDAN açılır. */
+interface TouchOrigin {
+  x: number
+  y: number
+  at: number
+  /** dokunulan düğmenin/satırın viewport kutusu ve görünümü; yoksa yalnız nokta kullanılır */
+  box: { top: number; left: number; width: number; height: number; radius: string; background: string; shadow: string } | null
+}
+let lastPoint: TouchOrigin | null = null
 /** Dokunuşla geçiş arasında bundan çok zaman geçtiyse nokta bayattır → ekran ortasından açılır. */
 const POINT_TTL_MS = 1500
 /** animationend gelmezse sınıfın en geç düşeceği süre (motion-base'in birkaç katı). */
 const CLEANUP_MS = 900
+/** kabuk büyümesinin süresi (ms) — ekran geçişinden biraz uzun, çünkü yol da uzun */
+const MORPH_MS = 340
 
 /** Dokunuş noktasını izlemeye başlar; döndürdüğü işlev dinleyiciyi kaldırır. */
 export function trackTouchOrigin(): () => void {
@@ -19,7 +28,7 @@ export function trackTouchOrigin(): () => void {
     const p = ev as PointerEvent
     if (typeof p.clientX !== 'number' || typeof p.clientY !== 'number') return
     if (p.clientX === 0 && p.clientY === 0) return // klavyeyle tetiklenen tık: nokta yok, ortadan açılsın
-    lastPoint = { x: p.clientX, y: p.clientY, at: Date.now() }
+    lastPoint = { x: p.clientX, y: p.clientY, at: Date.now(), box: boxOf(p.target) }
   }
   window.addEventListener('pointerdown', handler, { capture: true, passive: true })
   // iOS Safari :active sözde-sınıfını YALNIZ sayfada bir dokunma dinleyicisi varsa tetikler. Basılı geri bildirim
@@ -33,8 +42,83 @@ export function trackTouchOrigin(): () => void {
   }
 }
 
+/** Dokunulan öğenin en yakın "basılabilir" atasının kutusu ve görünümü; büyüyen kabuk buna göre kurulur. */
+function boxOf(target: EventTarget | null): TouchOrigin['box'] {
+  const start = target instanceof Element ? target : null
+  const el = start && typeof start.closest === 'function' ? start.closest('button, a, [role="button"], .list-item, .chip') : null
+  if (!el || typeof el.getBoundingClientRect !== 'function') return null
+  const r = el.getBoundingClientRect()
+  if (!(r.width > 0 && r.height > 0)) return null
+  const cs = typeof getComputedStyle === 'function' ? getComputedStyle(el) : null
+  return {
+    top: r.top, left: r.left, width: r.width, height: r.height,
+    radius: (cs && cs.borderRadius) || '999px',
+    background: (cs && cs.backgroundColor) || 'transparent',
+    shadow: cs && cs.boxShadow && cs.boxShadow !== 'none' ? cs.boxShadow : 'none',
+  }
+}
+
 /** Test/oturum sınırı için: nokta hafızasını temizler. */
 export function forgetTouchOrigin(): void { lastPoint = null }
+
+function motionReduced(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/**
+ * BL-54 — kabuk büyümesi (container transform): dokunulan tuşun KENDİSİ büyüyüp ekrana dönüşür. İki parça birlikte:
+ *   1) tuşun boş bir kopyası (kabuk) tuşun kutusundan tam ekrana büyür ve sonunda silinir,
+ *   2) yeni ekran aynı kutudan açılan yuvarlak dikdörtgenle (clip-path) ortaya çıkar — "içi açılıp içindekiler gelir".
+ * Web Animations API; `fill` YOK (BL-50 kuralı: animasyon donarsa/çalışmazsa içerik tam görünür kalır). Bitince ya da
+ * emniyet zaman aşımında her şey temizlenir. Kurulamazsa null döner ve çağıran CSS'teki ölçek geçişine düşer.
+ */
+function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>): (() => void) | null {
+  if (typeof el.animate !== 'function' || typeof document === 'undefined' || !document.body) return null
+  const elRect = el.getBoundingClientRect()
+  if (!(elRect.width > 0 && elRect.height > 0)) return null
+  const vw = document.documentElement.clientWidth || elRect.width
+  const vh = document.documentElement.clientHeight || elRect.height
+  // kutuyu ekranın kendi koordinatına çevir (clip-path öğenin kenar kutusuna göredir)
+  const top = Math.max(0, box.top - elRect.top)
+  const left = Math.max(0, box.left - elRect.left)
+  const right = Math.max(0, elRect.right - (box.left + box.width))
+  const bottom = Math.max(0, elRect.bottom - (box.top + box.height))
+
+  const shell = document.createElement('div')
+  shell.setAttribute('aria-hidden', 'true')
+  shell.className = 'morph-shell'
+  shell.style.cssText = [
+    'position:fixed', 'z-index:9', 'pointer-events:none',
+    `left:${box.left}px`, `top:${box.top}px`, `width:${box.width}px`, `height:${box.height}px`,
+    `border-radius:${box.radius}`, `background:${box.background}`, `box-shadow:${box.shadow}`,
+  ].join(';')
+  document.body.appendChild(shell)
+
+  const easing = 'cubic-bezier(0.2, 0, 0, 1)'
+  const shellAnim = shell.animate([
+    { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, borderRadius: box.radius, opacity: 1 },
+    { opacity: 0.5, offset: 0.35 },
+    { opacity: 0, offset: 0.72 },
+    { left: '0px', top: '0px', width: `${vw}px`, height: `${vh}px`, borderRadius: '0px', opacity: 0 },
+    // kabuk yolun ~%70'inde tamamen erir: "tuş büyüyüp dağılıyor" hissi kalır, ekranı kaplayan renk katmanı olmaz
+    // (özellikle mürekkep birincil düğmede tam ekran siyah bir kare çakması olurdu)
+  ], { duration: MORPH_MS, easing })
+  const clipAnim = el.animate([
+    { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round ${box.radius})`, opacity: 0.55 },
+    { clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 },
+  ], { duration: MORPH_MS, easing })
+
+  let cleaned = false
+  const cleanup = (): void => {
+    if (cleaned) return
+    cleaned = true
+    try { shellAnim.cancel() } catch { /* zaten bitmiş olabilir */ }
+    try { clipAnim.cancel() } catch { /* zaten bitmiş olabilir */ }
+    shell.remove()
+  }
+  void Promise.allSettled([shellAnim.finished, clipAnim.finished]).then(cleanup)
+  return cleanup
+}
 
 /**
  * Ekran köküne geçiş sınıfını ve büyüme merkezini yazar. Öğe DOM'a eklendikten SONRA çağrılmalıdır (merkez, öğenin
@@ -43,8 +127,9 @@ export function forgetTouchOrigin(): void { lastPoint = null }
  */
 export function applyScreenTransition(el: HTMLElement, kind: ScreenTransition | null): void {
   if (!kind) return
+  const fresh = lastPoint && Date.now() - lastPoint.at <= POINT_TTL_MS ? lastPoint : null
+  let morphCleanup: (() => void) | null = null
   if (kind === 'push') {
-    const fresh = lastPoint && Date.now() - lastPoint.at <= POINT_TTL_MS ? lastPoint : null
     const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null
     if (fresh && rect && rect.width > 0 && rect.height > 0) {
       const x = Math.min(Math.max(fresh.x - rect.left, 0), rect.width)
@@ -61,11 +146,18 @@ export function applyScreenTransition(el: HTMLElement, kind: ScreenTransition | 
   }
   const cls = kind === 'push' ? 'screen-push' : kind === 'pop' ? 'screen-pop' : 'screen-fade'
   el.classList.add(cls)
+  // Kabuk kurulabildiyse kabın kendi ölçek animasyonu susar (iki hareket üst üste binmesin). İçeriğin kademeli
+  // varışı `.screen-push > *` üzerinden aynen sürer: kabuk açılır, içindekiler sırayla yerine oturur.
+  if (kind === 'push' && fresh && fresh.box && !motionReduced()) {
+    morphCleanup = morphFromBox(el, fresh.box)
+    if (morphCleanup) el.classList.add('is-morphing')
+  }
   let timer: ReturnType<typeof setTimeout> | null = null
   const done = (): void => {
     if (timer) { clearTimeout(timer); timer = null }
     if (typeof el.removeEventListener === 'function') el.removeEventListener('animationend', onEnd)
-    el.classList.remove(cls)
+    if (morphCleanup) { morphCleanup(); morphCleanup = null }
+    el.classList.remove(cls, 'is-morphing')
     el.style.removeProperty('--origin-x')
     el.style.removeProperty('--origin-y')
   }

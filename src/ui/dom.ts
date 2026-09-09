@@ -1,5 +1,7 @@
 // Küçük DOM yardımcıları (çerçeve yok, 10 §1). Bileşenler yalnız token sınıfları bilir; ham renk yok (11 kural 38).
 
+import { icon, type IconName } from './icons'
+
 type Child = Node | string | number | null | undefined | false | Child[]
 
 export type Attrs = Record<string, string | number | boolean | EventListener | undefined | null>
@@ -39,14 +41,16 @@ export function renderText(text: string, cls = 'text-body'): HTMLElement {
   return h('p', { class: cls }, text)
 }
 
-export function button(label: string, onClick: () => void, opts: { variant?: 'primary' | 'secondary' | 'quiet' | 'danger'; disabled?: boolean; class?: string; testid?: string } = {}): HTMLButtonElement {
+export function button(label: string, onClick: () => void, opts: { variant?: 'primary' | 'secondary' | 'quiet' | 'danger'; disabled?: boolean; class?: string; testid?: string; icon?: IconName } = {}): HTMLButtonElement {
+  // Simge varsa etiketin ÖNÜNE gelir; etiket her zaman kalır (14 §9: simge tek başına taşıyıcı değildir) ve
+  // `textContent` yalnız etiketi verir — testler ve ekran okuyucu etkilenmez.
   return h('button', {
     type: 'button',
     class: `btn btn-${opts.variant ?? 'secondary'} ${opts.class ?? ''}`.trim(),
     disabled: opts.disabled ?? false,
     'data-testid': opts.testid,
     onClick: () => onClick(),
-  }, label)
+  }, opts.icon ? icon(opts.icon) : null, label)
 }
 
 export function field(label: string, input: HTMLElement, help?: string): HTMLElement {

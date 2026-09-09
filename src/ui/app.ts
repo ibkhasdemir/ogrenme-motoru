@@ -408,15 +408,15 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       // 14 §11: alt çubuk tek satırda, yatay kaydırmalı; sık kullanılan iki eylem başta
       h('div', { class: 'screen-bottom' },
         h('div', { class: 'nav-bar', role: 'group', 'aria-label': 'Gezinme' },
-          button('+ Yakala', () => void ctx.navigate({ name: 'capture' }), { class: 'btn-inline', testid: 'to-capture' }),
+          button('+ Yakala', () => void ctx.navigate({ name: 'capture' }), { class: 'btn-inline', testid: 'to-capture', icon: 'capture' }),
           pending > 0
-            ? button(`Kutu · ${pending}`, () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox' })
-            : button('Kutu', () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox' }),
-          button('+ Atom', () => void ctx.navigate({ name: 'atomForm' }), { class: 'btn-inline' }),
-          button('+ Soru', () => void ctx.navigate({ name: 'questionForm' }), { class: 'btn-inline' }),
-          button('İçerik', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline' }),
-          button('İlerleme', () => void ctx.navigate({ name: 'progress' }), { class: 'btn-inline', testid: 'to-progress' }),
-          button('Veri', () => void ctx.navigate({ name: 'data' }), { class: 'btn-inline' }),
+            ? button(`Kutu · ${pending}`, () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox', icon: 'inbox' })
+            : button('Kutu', () => void ctx.navigate({ name: 'inbox' }), { class: 'btn-inline', testid: 'to-inbox', icon: 'inbox' }),
+          button('+ Atom', () => void ctx.navigate({ name: 'atomForm' }), { class: 'btn-inline', icon: 'atom' }),
+          button('+ Soru', () => void ctx.navigate({ name: 'questionForm' }), { class: 'btn-inline', icon: 'question' }),
+          button('İçerik', () => void ctx.navigate({ name: 'content', view: { kind: 'list' } }), { class: 'btn-inline', icon: 'content' }),
+          button('İlerleme', () => void ctx.navigate({ name: 'progress' }), { class: 'btn-inline', testid: 'to-progress', icon: 'progress' }),
+          button('Veri', () => void ctx.navigate({ name: 'data' }), { class: 'btn-inline', icon: 'data' }),
         ),
       ),
     )

@@ -340,3 +340,11 @@ details.group[open] > .group-body { animation: group-open var(--motion-base) var
   .count-l { letter-spacing: 0.02em; }
   .btn { padding-inline: var(--space-4); }
 }
+
+/* --- BL-54 kabuk büyümesi + gezinme simgeleri ---
+   Kabuk kurulduğunda kabın kendi ölçek animasyonu susar; içeriğin kademeli varışı sürer (transition.ts). */
+.screen-push.is-morphing { animation: none; }
+
+/* Simge: düğme metniyle aynı renkte, metinle aynı optik ağırlıkta; tek başına anlam taşımaz (14 §9) */
+.icon { width: 1.15em; height: 1.15em; flex: 0 0 auto; opacity: 0.85; }
+.btn-primary > .icon { opacity: 1; }

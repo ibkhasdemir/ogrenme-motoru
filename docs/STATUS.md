@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **346 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **352 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,8 +15,8 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 346 test yeşil |
-| Kaynak | 66 TypeScript dosyası, ~4.600 satır |
+| Test | 35 dosya / 352 test yeşil |
+| Kaynak | 67 TypeScript dosyası, ~4.700 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
 ---
@@ -63,7 +63,7 @@ Gerçek iPhone kullanımından çıkanlar (`docs/PHONE_CHECK.md` §6'da F-1…F-
 | **BL-46** | **Kaydırıp arşivle / arşiv görünümü / koşullu kalıcı silme** | Kalıcı silme yalnız hiç ölçülmemiş, sorusu ve başka bağı olmayan atomda |
 | **BL-47** | **Okuma → ilk deneme boşluğu** — en az 2 öğe ya da 2 dk | Kullanıcı "konu veriyor hemen ardından soru" dedi; oturum penceresi, scheduler kararı değil |
 
-Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk), **BL-48** (görsel cila + yatay taşma düzeltmesi), **BL-50** (dokunulan noktadan açılan ekran geçişi) ve **BL-51** (tasarım sisteminin yeniden yazılması: serif öğrenme metni, mürekkep birincil eylem, kenarlıksız kartlar) ve **BL-52** (hareket katmanı: kademeli varış, cevap geri bildirimi, yapışkan başlık durumu).
+Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk), **BL-48** (görsel cila + yatay taşma düzeltmesi), **BL-50** (dokunulan noktadan açılan ekran geçişi) ve **BL-51** (tasarım sisteminin yeniden yazılması: serif öğrenme metni, mürekkep birincil eylem, kenarlıksız kartlar) ve **BL-52** (hareket katmanı: kademeli varış, cevap geri bildirimi, yapışkan başlık durumu) ve **BL-54** (kabuk büyümesi: basılan tuş ekrana dönüşür; gezinme simgeleri).
 
 ### 2.5 Bağımsız denetimler — 3 tur, 20 gerçek hata
 Her tur: ayrı bir ajan spec'i okur, kodu inceler, iddiaları repoda koşturur; bulunan her hata için gerileme testi yazıldı.
@@ -86,7 +86,8 @@ src/app/         uygulama katmanı: motor.ts (cephe), backup.ts, restore.ts, rec
                  contentImport.ts, aiImport.ts, aiSettings.ts, clockSkew.ts
 src/store/       repository.ts (arayüz) + memory/ + dexie/ (şema, migration) + recovery/
 src/platform/    services.ts (Clock, IdGenerator, HashService, BackupFileService) + ai.ts + web/
-src/ui/          app.ts (ekran makinesi + gezinme + odak koruma), transition.ts (ekran geçişi), content.ts, contentImport.ts,
+src/ui/          app.ts (ekran makinesi + gezinme + odak koruma), transition.ts (ekran geçişi + kabuk büyümesi),
+                 icons.ts (gezinme simgeleri), content.ts, contentImport.ts,
                  capture.ts, progress.ts, data*.ts, forms.ts, dom.ts, labels.ts, styles.css
 src/pwa/         register.ts (SW kaydı, güncelleme denetimi)
 public/sw.js     service worker (build başına tam ön-önbellek)
@@ -205,7 +206,14 @@ Kullanıcı tasarımı onayladı, "animasyonlar eksik" dedi. `14` §14 hareketi 
 - **`animation-delay` kullanma.** Gecikmeli girişte öğe önce görünür sonra kaybolur; bunu ancak `fill-mode` gizler, `fill-mode` ise donmuş animasyonda içeriği yok eder (BL-50). Çözüm: hepsi aynı anda başlar, **farklı sürelerde varır**. Test bunu bekçiler.
 - **`.is-stuck` ölü kuraldı.** BL-45'te CSS'e yazılmış, hiçbir yerde açılmamıştı. Yeni bir görsel kural yazarken "bunu kim açıyor?" sorusu sorulmalı.
 
-**Kalan:** telefonda Y-26…Y-32 (geçiş, aramada yanıp sönme, açık/koyu palet, "Hareketi Azalt", sürüm doğrulama, yeni tasarım, hareket katmanı).
+### 7.4 Dördüncü tur — BL-54 kabuk büyümesi
+Kullanıcı istediğini tarif etti: *"o tuş alttan ortaya doğru büyüyerek hareket edecek, sonra içi açılacak içindekiler gelecek."* Yapıldı: dokunulan tuşun boş bir kopyası ("kabuk") tuşun tam kutusundan, tam yarıçapından, tam renginden başlayıp ekranı kaplayacak biçimde büyür ve yolun **%72'sinde tamamen erir**; yeni ekran aynı kutudan açılan yuvarlak dikdörtgenle (`clip-path`) ortaya çıkar; içerik kademeli olarak yerine oturur. Dokunulan kutu `pointerdown` anında en yakın `button / a / [role=button] / .list-item / .chip` atasından okunduğu için **liste satırından atom ekranına geçiş de** aynı biçimde açılır. Ayrıca yedi gezinme düğmesine tek aileden simge eklendi (`src/ui/icons.ts`) — simge etiketin yerine geçmez, önüne gelir (`14` §9).
+
+Erken erime bilinçli: mürekkep birincil düğmede kabuk sonuna kadar opak kalsaydı tam ekran siyah bir kare çakması olurdu.
+
+Kabuk `aria-hidden` + `pointer-events: none`, bitişte ve emniyet zaman aşımında **mutlaka** silinir (geride görünmez bir katman kalsa dokunmayı engellerdi), `prefers-reduced-motion` açıkken hiç kurulmaz, `Element.animate` yoksa sessizce CSS geçişine düşülür.
+
+**Kalan:** telefonda Y-26…Y-33.
 
 ### 7.1 Sıradaki iş adayları
 Kullanıcı yeni bir yön vermezse §4.2'deki büyük adaylardan biri seçilir. Görsel tarafta bir sonraki doğal adım **semantik metin vurgusu** (`14` §5): `renderText(text, spans?)` zaten tek geçiş noktası, tarih/istisna/kişi vurgusu oradan eklenebilir. Spec revizyonu gerektirmez ama içerik varlığına isteğe bağlı sunum notu ekler; önce `BLOCKERS.md`'ye yazılmalı.

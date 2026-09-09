@@ -125,6 +125,110 @@ describe('BL-50 — ekran geçişi', () => {
   })
 })
 
+describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => {
+  type Proto = Record<string, unknown>
+  afterEach(() => { delete (Element.prototype as unknown as Proto).animate; vi.unstubAllGlobals() })
+
+  /** jsdom Element.animate'i HİÇ tanımlamaz (bu yüzden spyOn çalışmaz); bitişini elle tetikleyebildiğimiz sahtesi konur. */
+  function stubAnimate(): { finishAll: () => void } {
+    const resolvers: Array<() => void> = []
+    ;(Element.prototype as unknown as Proto).animate = function () {
+      let done!: () => void
+      const finished = new Promise<void>((r) => { done = () => r() })
+      resolvers.push(done)
+      return { finished, cancel: () => {}, playState: 'running' } as unknown as Animation
+    }
+    return { finishAll: () => { for (const r of resolvers) r() } }
+  }
+  function stubRects(): void {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const isButton = this.tagName === 'BUTTON'
+      return isButton
+        ? { x: 20, y: 700, left: 20, top: 700, right: 130, bottom: 748, width: 110, height: 48, toJSON: () => ({}) } as DOMRect
+        : { x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 800, width: 390, height: 800, toJSON: () => ({}) } as DOMRect
+    })
+  }
+  const tap = (el: HTMLElement) => el.dispatchEvent(new MouseEvent('pointerdown', { clientX: 40, clientY: 720, bubbles: true }))
+
+  it('basılan tuşun kutusundan büyüyen kabuk kurulur, kap kendi ölçeğini susturur', async () => {
+    stubRects()
+    const anims = stubAnimate()
+    await app()
+    const btn = byText('İçerik')
+    tap(btn)
+    await click(btn)
+    const shell = document.querySelector<HTMLElement>('.morph-shell')
+    expect(shell).not.toBeNull()
+    expect(shell!.getAttribute('aria-hidden')).toBe('true')
+    expect(shell!.style.left).toBe('20px')
+    expect(shell!.style.top).toBe('700px')
+    expect(shell!.style.width).toBe('110px')
+    expect(screenEl().classList.contains('is-morphing')).toBe(true)
+    // animasyonlar bitince kabuk kalmaz (geride görünmez bir katman bırakmak dokunmayı engellerdi)
+    anims.finishAll()
+    await flush()
+    expect(document.querySelector('.morph-shell')).toBeNull()
+  })
+
+  it('azaltılmış hareket açıkken kabuk hiç kurulmaz', async () => {
+    stubRects()
+    stubAnimate()
+    // jsdom matchMedia'yı da uygulamaz; kod bunu `typeof matchMedia === 'function'` ile korur, test global'i koyar
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduced-motion'), media: q }))
+    await app()
+    const btn = byText('İçerik')
+    tap(btn)
+    await click(btn)
+    expect(document.querySelector('.morph-shell')).toBeNull()
+    expect(screenEl().classList.contains('is-morphing')).toBe(false)
+  })
+
+  it('dokunuş kutusu bilinmiyorsa (klavyeyle tık) kabuk yok, CSS ölçek geçişi kalır', async () => {
+    stubRects()
+    stubAnimate()
+    await app()
+    await click(byText('İçerik')) // pointerdown YOK
+    expect(document.querySelector('.morph-shell')).toBeNull()
+    expect(screenEl().classList.contains('screen-push')).toBe(true)
+    expect(screenEl().classList.contains('is-morphing')).toBe(false)
+  })
+
+  it('uygulama kapanınca kabuk geride kalmaz', async () => {
+    stubRects()
+    stubAnimate()
+    await app()
+    const btn = byText('İçerik')
+    tap(btn)
+    await click(btn)
+    expect(document.querySelector('.morph-shell')).not.toBeNull()
+    handle!.destroy(); handle = null
+    document.body.replaceChildren()
+    expect(document.querySelector('.morph-shell')).toBeNull()
+  })
+})
+
+describe('BL-54 — gezinme simgeleri', () => {
+  it('her gezinme düğmesinde simge var ama metin etiketi de duruyor (simge tek taşıyıcı değil, 14 §9)', async () => {
+    await app()
+    const nav = [...document.querySelectorAll<HTMLElement>('.nav-bar .btn')]
+    expect(nav.length).toBeGreaterThanOrEqual(7)
+    for (const b of nav) {
+      const svg = b.querySelector('svg.icon')
+      expect(svg).not.toBeNull()
+      expect(svg!.getAttribute('aria-hidden')).toBe('true')
+      expect((b.textContent ?? '').trim().length).toBeGreaterThan(0)
+    }
+  })
+
+  it('simge metne karışmaz: textContent yalnız etiketi verir', async () => {
+    await app()
+    const labels = [...document.querySelectorAll<HTMLElement>('.nav-bar .btn')].map((b) => (b.textContent ?? '').trim())
+    expect(labels).toContain('İçerik')
+    expect(labels).toContain('Veri')
+    expect(labels).toContain('+ Yakala')
+  })
+})
+
 describe('BL-52 — yapışkan başlık durumu', () => {
   it('sayfa kayınca başlık ayırıcı çizgiyi alır, tepeye dönünce bırakır', async () => {
     await app()
