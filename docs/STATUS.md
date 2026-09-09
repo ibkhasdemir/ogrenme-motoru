@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **352 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **353 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 352 test yeşil |
+| Test | 35 dosya / 353 test yeşil |
 | Kaynak | 67 TypeScript dosyası, ~4.700 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
@@ -212,6 +212,8 @@ Kullanıcı istediğini tarif etti: *"o tuş alttan ortaya doğru büyüyerek ha
 Erken erime bilinçli: mürekkep birincil düğmede kabuk sonuna kadar opak kalsaydı tam ekran siyah bir kare çakması olurdu.
 
 Kabuk `aria-hidden` + `pointer-events: none`, bitişte ve emniyet zaman aşımında **mutlaka** silinir (geride görünmez bir katman kalsa dokunmayı engellerdi), `prefers-reduced-motion` açıkken hiç kurulmaz, `Element.animate` yoksa sessizce CSS geçişine düşülür.
+
+**BL-54 ilk denemede okunmuyordu, BL-55'te düzeltildi.** İki sebep: (a) ikincil düğmenin zemini beyaz, sayfa zemini kâğıt beyazı — büyüyen kabuk görünmüyordu; (b) içerik dokunulan taraftan bağımsız olarak hep aşağıdan geliyordu. Yama: kabuğun arkasına ekranı bir anlığına kısan **perde** (`--scrim`), kabuğa güçlü gölge (`--elev-2`), ve geliş yönünü dokunuş yerine bağlayan `--settle-dy`.
 
 **Kalan:** telefonda Y-26…Y-33.
 

@@ -84,6 +84,8 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --font-serif: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --focus-ring: 3px solid var(--color-accent);
+  /* kabuk büyürken zemini bir anlığına kısan perde (BL-55) */
+  --scrim: rgba(22, 23, 26, 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -101,6 +103,7 @@
     --state-uncertain: #dbb56d; --state-uncertain-bg: #322815;
     --elev-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 28px -18px rgba(0, 0, 0, 0.9);
     --elev-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 24px 48px -24px rgba(0, 0, 0, 0.95);
+    --scrim: rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -302,7 +305,7 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
 .screen-push > *:nth-child(4), .screen-fade > *:nth-child(4) { animation-duration: calc(var(--motion-settle) + 105ms); }
 .screen-push > *:nth-child(5), .screen-fade > *:nth-child(5) { animation-duration: calc(var(--motion-settle) + 130ms); }
 .screen-push > *:nth-child(n+6), .screen-fade > *:nth-child(n+6) { animation-duration: calc(var(--motion-settle) + 150ms); }
-@keyframes item-settle { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes item-settle { from { opacity: 0; transform: translateY(var(--settle-dy, 12px)); } to { opacity: 1; transform: none; } }
 
 /* Cevap geri bildirimi (§14'ün ilk örneği): sonuç kelimesi yerine oturur, doğru/yanlış dolgusu belirir.
    Ölçüm modunu bozmaz — bu hareket YALNIZ cevap açıldıktan sonraki ekranda vardır (§3, §10). */
@@ -341,9 +344,12 @@ details.group[open] > .group-body { animation: group-open var(--motion-base) var
   .btn { padding-inline: var(--space-4); }
 }
 
-/* --- BL-54 kabuk büyümesi + gezinme simgeleri ---
-   Kabuk kurulduğunda kabın kendi ölçek animasyonu susar; içeriğin kademeli varışı sürer (transition.ts). */
+/* --- BL-54/BL-55 kabuk büyümesi + gezinme simgeleri ---
+   Kabuk kurulduğunda kabın kendi ölçek animasyonu susar; içeriğin kademeli varışı sürer (transition.ts).
+   Kabuk ve perde geçici katmanlardır: dokunmayı ENGELLEMEZ ve transition.ts tarafından mutlaka silinir. */
 .screen-push.is-morphing { animation: none; }
+.morph-shell { position: fixed; z-index: 9; pointer-events: none; box-shadow: var(--elev-2); }
+.morph-scrim { position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--scrim); }
 
 /* Simge: düğme metniyle aynı renkte, metinle aynı optik ağırlıkta; tek başına anlam taşımaz (14 §9) */
 .icon { width: 1.15em; height: 1.15em; flex: 0 0 auto; opacity: 0.85; }

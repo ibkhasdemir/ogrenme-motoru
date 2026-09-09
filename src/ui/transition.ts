@@ -84,13 +84,20 @@ function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>): ((
   const right = Math.max(0, elRect.right - (box.left + box.width))
   const bottom = Math.max(0, elRect.bottom - (box.top + box.height))
 
+  // Perde: büyüyen kabuk zeminle aynı renkteyse (beyaz tuş / kâğıt zemin) hareket görünmez olur. Zemini bir anlığına
+  // kısarak büyüyen şeklin kenarını okunur kılar; sonunda tamamen kalkar. Renk token'dan gelir (11 kural 38).
+  const scrim = document.createElement('div')
+  scrim.setAttribute('aria-hidden', 'true')
+  scrim.className = 'morph-scrim'
+  document.body.appendChild(scrim)
+
   const shell = document.createElement('div')
   shell.setAttribute('aria-hidden', 'true')
   shell.className = 'morph-shell'
+  // Yalnız geometri ve renk satır içi; gölge CSS'te (tuşun kendi zayıf gölgesi büyüyünce kaybolur, kabuğa güçlüsü gerekir).
   shell.style.cssText = [
-    'position:fixed', 'z-index:9', 'pointer-events:none',
     `left:${box.left}px`, `top:${box.top}px`, `width:${box.width}px`, `height:${box.height}px`,
-    `border-radius:${box.radius}`, `background:${box.background}`, `box-shadow:${box.shadow}`,
+    `border-radius:${box.radius}`, `background:${box.background}`,
   ].join(';')
   document.body.appendChild(shell)
 
@@ -108,15 +115,20 @@ function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>): ((
     { clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 },
   ], { duration: MORPH_MS, easing })
 
+  const scrimAnim = scrim.animate(
+    [{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 0.75, offset: 0.65 }, { opacity: 0 }],
+    { duration: MORPH_MS, easing },
+  )
+
   let cleaned = false
   const cleanup = (): void => {
     if (cleaned) return
     cleaned = true
-    try { shellAnim.cancel() } catch { /* zaten bitmiş olabilir */ }
-    try { clipAnim.cancel() } catch { /* zaten bitmiş olabilir */ }
+    for (const a of [shellAnim, clipAnim, scrimAnim]) { try { a.cancel() } catch { /* zaten bitmiş olabilir */ } }
     shell.remove()
+    scrim.remove()
   }
-  void Promise.allSettled([shellAnim.finished, clipAnim.finished]).then(cleanup)
+  void Promise.allSettled([shellAnim.finished, clipAnim.finished, scrimAnim.finished]).then(cleanup)
   return cleanup
 }
 
@@ -144,6 +156,13 @@ export function applyScreenTransition(el: HTMLElement, kind: ScreenTransition | 
     const scroller = document.scrollingElement ?? document.documentElement
     if (scroller) scroller.scrollTop = 0
   }
+  // İçeriğin geliş yönü dokunulan tarafa bağlanır: alttaki gezinme tuşuna basıldıysa içerik aşağıdan yukarı,
+  // üstteki bir satıra basıldıysa yukarıdan aşağı yerleşir. Aksi hâlde kabuk alttan büyürken içerik yukarıdan
+  // düşer ve iki hareket birbirine ters çalışır.
+  if (kind === 'push' && fresh && typeof el.getBoundingClientRect === 'function') {
+    const r = el.getBoundingClientRect()
+    if (r.height > 0) el.style.setProperty('--settle-dy', fresh.y - r.top < r.height * 0.45 ? '-12px' : '12px')
+  }
   const cls = kind === 'push' ? 'screen-push' : kind === 'pop' ? 'screen-pop' : 'screen-fade'
   el.classList.add(cls)
   // Kabuk kurulabildiyse kabın kendi ölçek animasyonu susar (iki hareket üst üste binmesin). İçeriğin kademeli
@@ -160,6 +179,7 @@ export function applyScreenTransition(el: HTMLElement, kind: ScreenTransition | 
     el.classList.remove(cls, 'is-morphing')
     el.style.removeProperty('--origin-x')
     el.style.removeProperty('--origin-y')
+    el.style.removeProperty('--settle-dy')
   }
   // animationend KABARCIKLANIR: içerideki kademeli varış animasyonları da bu öğeye ulaşır. Hedef kontrolü olmadan
   // ilk biten çocuk (en hızlısı) ekranın sınıfını düşürür ve HENÜZ BİTMEMİŞ bütün animasyonlar aynı anda kesilir —

@@ -164,10 +164,15 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     expect(shell!.style.top).toBe('700px')
     expect(shell!.style.width).toBe('110px')
     expect(screenEl().classList.contains('is-morphing')).toBe(true)
-    // animasyonlar bitince kabuk kalmaz (geride görünmez bir katman bırakmak dokunmayı engellerdi)
+    // BL-55: kabuk zeminle aynı renk olabilir; perde zemini kısarak büyüyen şekli okunur kılar
+    const scrim = document.querySelector('.morph-scrim')
+    expect(scrim).not.toBeNull()
+    expect(scrim!.getAttribute('aria-hidden')).toBe('true')
+    // animasyonlar bitince İKİSİ de kalmaz (geride görünmez katman bırakmak dokunmayı engellerdi)
     anims.finishAll()
     await flush()
     expect(document.querySelector('.morph-shell')).toBeNull()
+    expect(document.querySelector('.morph-scrim')).toBeNull()
   })
 
   it('azaltılmış hareket açıkken kabuk hiç kurulmaz', async () => {
@@ -180,6 +185,7 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     tap(btn)
     await click(btn)
     expect(document.querySelector('.morph-shell')).toBeNull()
+    expect(document.querySelector('.morph-scrim')).toBeNull()
     expect(screenEl().classList.contains('is-morphing')).toBe(false)
   })
 
@@ -193,6 +199,23 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     expect(screenEl().classList.contains('is-morphing')).toBe(false)
   })
 
+  it('BL-55: içerik dokunulan taraftan gelir (alttan basınca aşağıdan, üstten basınca yukarıdan)', async () => {
+    stubRects()
+    stubAnimate()
+    await app()
+    // ekran kutusu 0..800; alt gezinme tuşuna basış (y = 720) → içerik aşağıdan yukarı
+    const btn = byText('İçerik')
+    btn.dispatchEvent(new MouseEvent('pointerdown', { clientX: 40, clientY: 720, bubbles: true }))
+    await click(btn)
+    expect(screenEl().style.getPropertyValue('--settle-dy')).toBe('12px')
+    // üstteki bir öğeye basış (y = 60) → içerik yukarıdan aşağı
+    const anyBtn = document.querySelector<HTMLElement>('button')!
+    anyBtn.dispatchEvent(new MouseEvent('pointerdown', { clientX: 40, clientY: 60, bubbles: true }))
+    await handle!.ctx.navigate({ name: 'data' })
+    await flush()
+    expect(screenEl().style.getPropertyValue('--settle-dy')).toBe('-12px')
+  })
+
   it('uygulama kapanınca kabuk geride kalmaz', async () => {
     stubRects()
     stubAnimate()
@@ -204,6 +227,7 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     handle!.destroy(); handle = null
     document.body.replaceChildren()
     expect(document.querySelector('.morph-shell')).toBeNull()
+    expect(document.querySelector('.morph-scrim')).toBeNull()
   })
 })
 

@@ -225,6 +225,18 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Testler: `tests/phase20-visual-polish.test.ts` — kabuk basılan tuşun kutusunda kurulur; animasyon bitince silinir; azaltılmış harekette hiç kurulmaz; kutu bilinmiyorsa (klavyeyle tık) CSS geçişine düşer; uygulama kapanınca geride kalmaz; her gezinme düğmesinde simge var ama etiket de duruyor. Toplam 352 yeşil.
 - Durum: **KAPANDI**. Telefon kontrolü: Y-33.
 
+### BL-55 — Kabuk büyümesi okunmuyordu: perde + geliş yönü (2026-09-09)
+- Gözlem: kullanıcı BL-54'ten sonra *"aha bir şeyler oldu bu sefer sanki ama **arka plandan dolayı çok anlaşılmıyor**. Bir de tam onun olduğu taraftan gelecek, **bastığım yerden gelmesi lazım** efektin."* dedi. İki ayrı sorun, ikisi de gerçek:
+  1. **Kabuk zeminle aynı renkti.** İkincil gezinme düğmesinin zemini `--color-surface` (beyaz), sayfa zemini `--color-background` (kâğıt beyazı). Beyaz bir kabuğun beyaz zemin üzerinde büyümesi görünmüyordu; tuşun kendi gölgesi de büyüdükçe eriyip kayboluyordu.
+  2. **İçerik her zaman aşağıdan geliyordu.** BL-52'nin kademeli varışı sabit `translateY(12px)` kullanıyordu. Alt gezinme tuşuna basıldığında doğru; ama kabuk alttan büyürken içeriğin yukarıdan düşmesi gerektiği durumlarda iki hareket birbirine ters çalışıyordu.
+- Yama:
+  1. **Perde (`--scrim`).** Kabuğun arkasına, ekranı kaplayan ince bir kısma katmanı konur: opaklığı 0 → 1 → 0 gider, yolun sonunda tamamen kalkar. Zemin bir anlığına kısıldığı için büyüyen şeklin kenarı her renk kombinasyonunda okunur olur (iOS'ta sheet açılırken arkanın kısılmasıyla aynı fikir). Renk token'dadır: açıkta `rgba(22,23,26,0.16)`, koyuda `rgba(0,0,0,0.5)`.
+  2. **Kabuğun gölgesi CSS'e alındı** (`--elev-2`): tuşun kendi zayıf gölgesi yerine, büyüdükçe de okunan güçlü bir gölge.
+  3. **Geliş yönü dokunulan tarafa bağlandı.** `--settle-dy`: dokunuş ekranın üst %45'indeyse içerik yukarıdan (`-12px`), altındaysa aşağıdan (`12px`) yerleşir. Böylece kabuk ile içerik aynı yönde çalışır.
+- Perde de kabuk gibi `aria-hidden`, `pointer-events: none` ve bitişte/emniyet zaman aşımında **mutlaka** silinir; azaltılmış harekette hiç kurulmaz. Gerçek tarayıcıda doğrulandı: geçişten sonra `clip-path: none`, `body` içinde artık katman yok.
+- Testler: perde kurulur ve kabukla birlikte silinir; azaltılmış harekette ikisi de kurulmaz; uygulama kapanınca ikisi de kalmaz; `--settle-dy` dokunuş yerine göre `12px`/`-12px` olur. Toplam 353 yeşil (mevcut testler genişletildi, bir yeni test eklendi).
+- Durum: **KAPANDI**. Telefon kontrolü: Y-33 güncellendi.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).
