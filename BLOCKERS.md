@@ -266,6 +266,15 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Testler: kabuk üç farklı dokunuş noktasında **üç farklı çapa** üretir; kabuk ekran boyundadır ve `transform-origin` dokunuş noktasıdır; alt çubuk tam dört alan taşır ve etiketleri `['+ Yakala','Kutu','İçerik','Veri']`'dir. `phase9-ui` testleri yeni akışa göre güncellendi (+ Atom / + Soru artık İçerik'ten açılıyor). Toplam 354 yeşil.
 - Durum: **KAPANDI**. Telefon kontrolü: Y-35.
 
+### BL-58 — Kabuk çok büyük başlıyordu: başlangıç ölçeği en büyük kenardan değil ALAN oranından (2026-09-09)
+- Gözlem (kullanıcı): *"Sorunu buldum, **ilk açılma ekranı çok büyük** ya."* Teşhis doğruydu ve BL-57'nin "hepsi aynı görünüyor" şikâyetinin de altında yatan sebep buydu.
+- Sebep: başlangıç ölçeği `min(0.6, max(genişlik/vw, yükseklik/vh, 0.12))` idi. **Tam genişlikteki her öğede** — birincil düğme, her liste satırı, yani en çok dokunulan yerler — genişlik oranı 1'e yaklaşıyor, `max` onu seçiyor ve üst sınır 0.6'ya çarpıyordu. Kabuk %60 boyutunda başlayıp %100'e gidiyordu: 1.67 kat büyüme, telefonda neredeyse görünmez. Alt çubuk düğmesinde oran 0.22 çıktığı için efekt orada görünüyor, listede görünmüyordu — "bazı yerlerde var bazı yerlerde yok" hissi buradan geliyordu.
+- 390×844 ekranda ölçülen değerler (eski → yeni): alt çubuk düğmesi 0.22 → 0.12 · "Başla" birincil düğmesi **0.60 → 0.23** · liste satırı **0.60 → 0.26** · çip 0.28 → 0.12.
+- Yama: başlangıç ölçeği artık iki kenarın **geometrik ortalaması** (alan oranı), en büyük kenar değil: `clamp(sqrt((w/vw)*(h/vh)), 0.12, 0.32)`. Geniş ve alçak bir satırın ekranın gerçekte ne kadarını kapladığını doğru anlatan ölçü budur.
+- Ders: **"en büyük kenar" bir öğenin ekrandaki ağırlığını temsil etmez.** Tam genişlikte ama alçak öğeler (satır, çubuk, tam genişlikli düğme) bu arayüzün çoğunluğu; tek kenara bakan her formül onlarda bozulur.
+- Gerileme testi: tam genişlikteki (350×48) bir öğede başlangıç ölçeği 0.12–0.32 aralığında olmalı. Eski formülle düşüyor, yamayla geçiyor (doğrulandı). Toplam 355 yeşil.
+- Durum: **KAPANDI**.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

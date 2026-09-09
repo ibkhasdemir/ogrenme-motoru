@@ -101,8 +101,11 @@ function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>, poi
   // aynı "perde yukarı açılıyor" hareketi çıkıyordu.)
   const originX = Math.min(Math.max(point.x, 0), vw)
   const originY = Math.min(Math.max(point.y, 0), vh)
-  // Alt sınır: geniş ekranda küçük bir tuş, iğne başı gibi başlamasın (telefonda oran zaten ~0.25 çıkar).
-  const startScale = Math.min(0.6, Math.max(box.width / vw, box.height / vh, 0.12))
+  // Başlangıç ölçeği ALAN oranından gelir (iki kenarın geometrik ortalaması), en büyük kenardan DEĞİL.
+  // `max(genişlik, yükseklik)` kullanmak tam genişlikteki her öğede — birincil düğme, her liste satırı — oranı
+  // 1'e yaklaştırıyor ve kabuk %60'tan başlıyordu: büyüme neredeyse görünmüyordu. Alan oranı, geniş ve alçak bir
+  // satırın gerçekte ekranın ne kadarını kapladığını doğru anlatır. Alt/üst sınır: iğne başı da olmasın, kocaman da.
+  const startScale = Math.min(0.32, Math.max(Math.sqrt((box.width / vw) * (box.height / vh)), 0.12))
   const shell = document.createElement('div')
   shell.setAttribute('aria-hidden', 'true')
   shell.className = 'morph-shell'

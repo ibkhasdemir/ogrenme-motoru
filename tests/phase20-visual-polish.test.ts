@@ -197,6 +197,30 @@ describe('BL-54 — kabuk büyümesi (basılan tuş ekrana dönüşür)', () => 
     expect(origins[2]).toContain('195px')
   })
 
+  it('BL-58: TAM GENİŞLİKTEKİ öğede bile kabuk küçükten başlar (büyüme görünür kalmalı)', async () => {
+    // ekran 390×800; düğme kutusu tam genişlik ve alçak (350×48) — eski formül (en büyük kenar) 0.9 verip
+    // büyümeyi görünmez yapıyordu. Alan oranı 0.23 civarı vermeli; üst sınır 0.32.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return this.tagName === 'BUTTON'
+        ? { x: 20, y: 700, left: 20, top: 700, right: 370, bottom: 748, width: 350, height: 48, toJSON: () => ({}) } as DOMRect
+        : { x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 800, width: 390, height: 800, toJSON: () => ({}) } as DOMRect
+    })
+    const frames: Keyframe[][] = []
+    ;(Element.prototype as unknown as Proto).animate = function (kf: Keyframe[]) {
+      frames.push(kf)
+      return { finished: Promise.resolve(), cancel: () => {}, playState: 'running' } as unknown as Animation
+    }
+    await app()
+    const btn = byText('İçerik')
+    btn.dispatchEvent(new MouseEvent('pointerdown', { clientX: 40, clientY: 720, bubbles: true }))
+    await click(btn)
+    const shellFrames = frames.find((f) => typeof f[0]?.transform === 'string' && String(f[0].transform).startsWith('scale('))
+    expect(shellFrames).toBeDefined()
+    const start = Number(String(shellFrames![0]!.transform).replace('scale(', '').replace(')', ''))
+    expect(start).toBeGreaterThanOrEqual(0.12)
+    expect(start).toBeLessThanOrEqual(0.32)
+  })
+
   it('azaltılmış hareket açıkken kabuk hiç kurulmaz', async () => {
     stubRects()
     stubAnimate()

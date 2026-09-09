@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **354 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **355 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 354 test yeşil |
+| Test | 35 dosya / 355 test yeşil |
 | Kaynak | 67 TypeScript dosyası, ~4.700 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
@@ -232,6 +232,10 @@ Kullanıcı: *"efekt çok amatörce, hepsi aynı şekilde açılıyor"*, *"sağa
 - **Geçiş dokunulan NOKTAYA çapalandı.** Eski kabuk kutudan kutuya interpolasyon yapıyordu; nereye basılırsa basılsın aynı hareket çıkıyordu. Yeni kabuk ekran boyunda, `transform-origin` parmağın tam pikseli, küçükten büyüğe ölçekleniyor → hareket o noktadan çapraz yayılıyor. **Üç köşe/durum yok; çapa sürekli bir koordinat**, ara noktaların ayrı kuralı da yok. Cam kenarı ölçekle incelmesin diye karşı-ölçekleniyor (`border-width` ≈ 1/ölçek).
 - **Alt çubuğun asıl kusuru biçimsel değildi: yedi düğme sığmıyordu** (390 px ekranda 446 px istiyordu). `07` §6'nın "en fazla dört alan" kuralına inildi: Yakala · Kutu · İçerik · Veri, simge üstte etiket altta, kaydırma yok. **+ Atom / + Soru İçerik ekranına**, **İlerleme** sayıların altına taşındı.
 - **Bildirilen hata:** kaydırılan çubuk her yeniden çizimde başa dönüyordu (`scrollLeft` korunmuyordu — odak ve açık paneller için yapılan koruma çubuk için yapılmamıştı). `captureScroll`/`restoreScroll` eklendi.
+
+**BL-58 — kullanıcının teşhisi:** *"ilk açılma ekranı çok büyük ya."* Doğruydu. Kabuğun başlangıç ölçeği `max(genişlik oranı, yükseklik oranı)` ile hesaplanıyordu; tam genişlikteki her öğede (birincil düğme, her liste satırı) oran 1'e yaklaşıp üst sınıra çarpıyor, kabuk %60'tan başlıyordu — 1.67 kat büyüme, neredeyse görünmez. Alt çubuk düğmesinde 0.22 çıktığı için efekt orada görünüp listede görünmüyordu; "hepsi aynı / bazen yok" hissinin kaynağı buydu. Ölçek artık **alan oranından** (iki kenarın geometrik ortalaması) geliyor: birincil düğme 0.60 → 0.23, liste satırı 0.60 → 0.26.
+
+**Ders:** "en büyük kenar" bir öğenin ekrandaki ağırlığını temsil etmez; bu arayüzün çoğunluğu tam genişlikte ama alçak öğelerdir.
 
 **Kalan:** telefonda Y-26…Y-35.
 
