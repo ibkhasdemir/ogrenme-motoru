@@ -140,6 +140,8 @@ Kurallar: `due` yalnız scheduler adaptöründe yazılır; Attempt/AttemptVoid/Q
 
 ## Belgeler
 
+- **`docs/STATUS.md` — durum raporu; yeni bir oturuma buradan başlanır** (ne yapıldı, mimari haritası, açık kararlar, sıradaki iş)
+
 - `docs/spec/` — spec paketi v1.6 (değiştirilmez)
 - `BASELINE_AUDIT.md` — Phase -1 (Yol B) ve ortam bulguları
 - `BLOCKERS.md` — spec çelişkileri, uygulanan varsayılanlar, karar bekleyen maddeler
