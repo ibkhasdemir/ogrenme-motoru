@@ -22,7 +22,15 @@ export function trackTouchOrigin(): () => void {
     lastPoint = { x: p.clientX, y: p.clientY, at: Date.now() }
   }
   window.addEventListener('pointerdown', handler, { capture: true, passive: true })
-  return () => { window.removeEventListener('pointerdown', handler, { capture: true }); forgetTouchOrigin() }
+  // iOS Safari :active sözde-sınıfını YALNIZ sayfada bir dokunma dinleyicisi varsa tetikler. Basılı geri bildirim
+  // (düğme/çip/seçenek küçülmesi) telefonda ancak bu boş dinleyiciyle görünür hâle gelir; masaüstünde etkisi yok.
+  const noop = (): void => {}
+  window.addEventListener('touchstart', noop, { capture: true, passive: true })
+  return () => {
+    window.removeEventListener('pointerdown', handler, { capture: true })
+    window.removeEventListener('touchstart', noop, { capture: true })
+    forgetTouchOrigin()
+  }
 }
 
 /** Test/oturum sınırı için: nokta hafızasını temizler. */
@@ -44,6 +52,12 @@ export function applyScreenTransition(el: HTMLElement, kind: ScreenTransition | 
       el.style.setProperty('--origin-x', `${Math.round(x)}px`)
       el.style.setProperty('--origin-y', `${Math.round(y)}px`)
     }
+  }
+  // İleri gidişte sayfa başa sarar: yeni ekran her zaman kendi başlığından başlar (uzun bir listenin ortasındayken
+  // açılan ekranın "ortadan" başlaması gezinmeyi bozar). Geri gidişte bulunduğun yer korunur.
+  if (kind === 'push' && typeof document !== 'undefined') {
+    const scroller = document.scrollingElement ?? document.documentElement
+    if (scroller) scroller.scrollTop = 0
   }
   const cls = kind === 'push' ? 'screen-push' : kind === 'pop' ? 'screen-pop' : 'screen-fade'
   el.classList.add(cls)

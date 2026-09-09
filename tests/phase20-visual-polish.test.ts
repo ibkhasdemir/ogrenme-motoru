@@ -140,6 +140,24 @@ describe('BL-50 — hareket içeriği asla gizlemez (14 §1: okunabilirlik > sü
     expect(block.slice(0, 80)).toMatch(/animation:\s*none/)
   })
 
+  it('ham hex YALNIZ :root bloklarında (11 kural 38): bileşenler token adı bilir', () => {
+    const lines = css.split(String.fromCharCode(10))
+    let inRoot = false
+    const leaks: string[] = []
+    for (const raw of lines) {
+      const line = raw.trim()
+      if (line.startsWith(':root')) inRoot = true
+      else if (inRoot && line === '}') inRoot = false
+      if (inRoot || line.startsWith('/*') || line.startsWith('*')) continue
+      const HEX = '0123456789abcdefABCDEF'
+      for (let i = line.indexOf('#'); i !== -1; i = line.indexOf('#', i + 1)) {
+        const three = line.slice(i + 1, i + 4)
+        if (three.length === 3 && [...three].every((c) => HEX.includes(c))) { leaks.push(line); break }
+      }
+    }
+    expect(leaks).toEqual([])
+  })
+
   it('animationend gelmezse sınıf yine de düşer (emniyet ağı)', () => {
     vi.useFakeTimers()
     try {

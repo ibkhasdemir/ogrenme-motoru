@@ -168,6 +168,26 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Spec revizyonu gerekmedi: `14` rol adları ve token adları değişmedi, yalnız değerleri değişti (§2 son cümlesi bunu açıkça serbest bırakıyor). `.screen-push/pop/fade` §14'ün "kart geçişi / yeni içeriğin açılması" kalemine girer.
 - Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (12 test). Telefon kontrolü: `docs/PHONE_CHECK.md` Y-26…Y-29.
 
+### BL-51 — "Editoryal sakinlik": tasarım sisteminin yeniden yazılması (2026-09-09)
+- Bölüm: `14` §1, §6 (tipografi — "okuma metni için **sistem serif isteğe bağlı ve token'la seçilebilir**"), §7, §8, §9, §14, §16, §18; `10` §1 (kopya tema, zorunlu özel yazı tipi paketi, süs animasyon yasak — ama "yüksek kaliteli modern mobil görünüm … v0 kalitesinin parçasıdır"); `11` kural 38.
+- Gözlem: BL-50 turundan sonra kullanıcı **"hiçbiri olmamış, ultra premium istiyorum, sağlam 30 yıllık grafikerin elinden çıkmış bir şey lazım"** dedi. İki ayrı sebep vardı ve ikisi de gerçekti:
+  1. **Telefon eski sürümü gösteriyordu.** Canlı CSS denetlendi (`screen-push`, `#1e4f86`, `#f3f2ef` sunucuda mevcuttu): yayın doğruydu, ana ekran uygulaması service worker kopyasını gösteriyordu. Kullanıcının "Yenile"ye basması gerekiyordu.
+  2. **BL-50 gerçekten fazla ölçülüydü.** Zemin `#f6f5f1 → #f3f2ef` gibi farklar telefon ekranında ayırt edilmiyor. "Cila" yeterli değildi; sistemin kendisi değişmeliydi.
+- Yapılan — `styles.css` tek tutarlı sistem olarak yeniden yazıldı (üç turda üst üste binmiş "cila" blokları birleştirildi):
+  1. **Tipografi ikiliği.** Öğrenme metni (`.text-question`, `.text-body`, `.hook`) **sistem serif** (`ui-serif`/"New York"/Georgia), arayüz metni sistem sans. §6 bunu açıkça serbest bırakıyor ve `10` §1'in yasakladığı "zorunlu özel yazı tipi paketi" değil (dosya indirilmiyor, çevrimdışı çalışır). Etki: "okunacak şey" ile "basılacak şey" bir bakışta ayrışıyor; ekran soru bankası değil, sayfa gibi duruyor.
+  2. **Eylem ile anlam ayrıldı.** Birincil eylem artık vurgu mavisi değil, **mürekkep kapsül** (`--color-action`; koyu temada tersine dönüp neredeyse beyaz olur). Mavi (`--color-accent`) yalnız anlam taşır: seçili seçenek, açık çip, rozet. `14` §18'in "jenerik parlak mavi birincil"den kaçınma kuralı ancak böyle gerçekten uygulanmış oluyor.
+  3. **Kenarlık yerine yükselti.** Açık temada kartlar kenarlıksız (`--card-border: transparent`), saf beyaz, iki katmanlı yumuşak gölgeyle sıcak kâğıt zeminden ayrılıyor; koyu temada saç teli kenar geri geliyor (o zeminde gölge yetmez). Kalın tan kenarlıklar "form" hissinin ana kaynağıydı.
+  4. **Bugün sayıları tek kart.** Üç ayrı kutu yerine tek kart içinde saç teli bölmeler; rakamlar `type-display` + tabular-nums, etiketler küçük harf boşluklu büyük harf.
+  5. **Yarıçap hiyerarşisi** (§7 "her şeye aynı yarıçap değil"): kapsül (eylem/çip) · lg 22 (kart) · md 14 (alan/seçenek).
+  6. **Kırıntı ve küçük etiketler** harf boşluklu büyük harf "eyebrow"; başlıklar 700 ağırlık ve negatif harf aralığıyla.
+  7. **Geçiş belirginleşti**: `--motion-screen: 320ms`, büyüme `scale(0.86) → 1`. İleri gidişte sayfa başa sarar (uzun listenin ortasından açılan ekran artık ortadan başlamıyor).
+  8. **iOS'ta basılı geri bildirim düzeltildi.** iOS Safari `:active`'i yalnız sayfada bir dokunma dinleyicisi varsa tetikler; boş bir `touchstart` dinleyicisi eklendi. BL-50'de yazılan basılı hâller telefonda bu yüzden görünmüyordu — kullanıcının "3 nolu madde de olmadı" demesi haklıydı.
+  9. `index.html` `theme-color` ve `manifest.webmanifest` renkleri yeni zemine çekildi (iOS'ta durum çubuğu ve açılış zemini).
+- Ölçüm (gerçek Chrome, WCAG formülü, `color(srgb …)` biçimini de çözen ölçer): açık temada en düşük oran **4.67:1** (şablon bloğunda ikincil metin), koyu temada **7.04:1**; birincil düğme 17:1 / 16.4:1. Yatay taşma 0 px (nav çubuğu kendi kabında kaydırılır). AA (4.5) her yerde geçildi.
+- Değişmeyenler: ekran yerleşimi ve akış (§11 görsel hafıza istikrarı), ölçüm modu ↔ öğrenme modu ayrımı (§3, §10 — seçenekler cevap açılmadan renk almaz), dokunma hedefi 44–48 px, `prefers-reduced-motion` tüm hareketi kapatır, renk hiçbir yerde tek taşıyıcı değil.
+- Spec revizyonu gerekmedi: token **adları** ve semantik rol adları aynı; değişen değerler ve iki yeni UI token (`--color-action`, `--color-action-contrast`, `--card-border`, `--motion-screen`, `--font-serif`). `14` §2 "bugün seçilen hex'ler değişebilir; rol adları değişmez" der.
+- Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (13; ham hex'in yalnız `:root`'ta kalmasını da bekçiler). Telefon kontrolü: `docs/PHONE_CHECK.md` Y-26…Y-31.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).

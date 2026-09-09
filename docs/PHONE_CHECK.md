@@ -85,6 +85,8 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | Y-27 | Aramada yanıp sönme yok | İçerik → arama kutusuna yazarken ekran her tuşta yeniden belirmez, klavye kapanmaz | ☐ | |
 | Y-28 | Palet (açık/koyu) | iOS Ayarlar → Görünüm ile ikisi de denenir: metin her yerde rahat okunur, doğru/yanlış/uyarı renkleri hâlâ ayırt edilir, koyu modda parlama yok | ☐ | |
 | Y-29 | Azaltılmış hareket | iOS Ayarlar → Erişilebilirlik → Hareket → "Hareketi Azalt" açıkken geçiş animasyonu **hiç** olmaz, ekranlar anında ve tam görünür gelir | ☐ | |
+| Y-30 | Yeni sürüme geçtiğinden emin ol | Uygulamayı öne al → "Yeni sürüm hazır · Yenile" çıkarsa **Yenile**'ye bas. Çıkmıyorsa uygulamayı tamamen kapatıp aç. Değişiklik görünmüyorsa büyük olasılıkla eski sürümdesin | ☐ | BL-51'de bu yaşandı |
+| Y-31 | Yeni tasarım (BL-51) | Okuma/soru metni **serif** (kitap harfi), arayüz metni sans; birincil düğme siyah kapsül (koyu temada beyaz); Bugün sayıları tek kart içinde üç bölme; kartların kalın kenarlığı yok | ☐ | |
 | Y-10 | Atom ekranı → Çengel ekle | kendi kodlaman kaydedilir, kartta "Çengeli göster" ile çıkar; aynı metin ikinci kez "zaten var" | ☐ | |
 
 ## 4. Notlar

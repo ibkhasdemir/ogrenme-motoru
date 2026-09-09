@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **341 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **342 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 341 test yeşil |
+| Test | 35 dosya / 342 test yeşil |
 | Kaynak | 66 TypeScript dosyası, ~4.600 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
@@ -63,7 +63,7 @@ Gerçek iPhone kullanımından çıkanlar (`docs/PHONE_CHECK.md` §6'da F-1…F-
 | **BL-46** | **Kaydırıp arşivle / arşiv görünümü / koşullu kalıcı silme** | Kalıcı silme yalnız hiç ölçülmemiş, sorusu ve başka bağı olmayan atomda |
 | **BL-47** | **Okuma → ilk deneme boşluğu** — en az 2 öğe ya da 2 dk | Kullanıcı "konu veriyor hemen ardından soru" dedi; oturum penceresi, scheduler kararı değil |
 
-Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk), **BL-48** (görsel cila + yatay taşma düzeltmesi) ve **BL-50** (premium tur: dokunulan noktadan açılan ekran geçişi, yeni palet, dokunma geri bildirimi).
+Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk), **BL-48** (görsel cila + yatay taşma düzeltmesi), **BL-50** (dokunulan noktadan açılan ekran geçişi) ve **BL-51** (tasarım sisteminin yeniden yazılması: serif öğrenme metni, mürekkep birincil eylem, kenarlıksız kartlar).
 
 ### 2.5 Bağımsız denetimler — 3 tur, 20 gerçek hata
 Her tur: ayrı bir ajan spec'i okur, kodu inceler, iddiaları repoda koşturur; bulunan her hata için gerileme testi yazıldı.
@@ -184,7 +184,18 @@ Kullanıcının cümleleri: *"biraz makyaj yapalım, UX daha premium dursun, şu
 
 **Bu turun en önemli dersi (tekrarlanmaması için):** geçiş kurallarında `animation-fill-mode: both` KULLANILMAZ. Gerçek tarayıcıda gözlendi: sekme boyanmazken animasyonun zaman çizgisi donuyor, `fill: both` ile ekran `opacity: 0`'da kilitli kalıyordu — yani hareketin bozulması içeriği gizliyordu. Artık fill yok, üstüne `animationend` gelmezse sınıfı düşüren zaman aşımı var. `tests/phase20-visual-polish.test.ts` bu kuralı statik olarak da bekçiliyor.
 
-**Kalan:** telefonda Y-26…Y-29 (geçiş, aramada yanıp sönme, açık/koyu palet, "Hareketi Azalt").
+### 7.2 İkinci tur — BL-51 "editoryal sakinlik" (aynı gün)
+Kullanıcı BL-50'den sonra **"hiçbiri olmamış, ultra premium istiyorum"** dedi. İki sebep de gerçekti:
+- **Telefon eski sürümü gösteriyordu.** Canlı CSS denetlendi, yayın doğruydu; ana ekran uygulaması service worker kopyasını gösteriyordu. **Ders: görsel bir turdan sonra ilk iş kullanıcıya "Yenile"ye bastığını doğrulatmak** (telefon listesine Y-30 olarak eklendi).
+- **BL-50 gerçekten fazla ölçülüydü.** `#f6f5f1 → #f3f2ef` gibi farklar telefonda ayırt edilmiyor. Cila yetmedi, sistem değişti.
+
+`styles.css` tek tutarlı sistem olarak yeniden yazıldı: öğrenme metni **sistem serif** / arayüz sans (§6 bunu serbest bırakır); birincil eylem **mürekkep kapsül**, mavi yalnız anlam taşır (§18); açık temada kartlar **kenarlıksız**, gölgeyle ayrışır; Bugün sayıları tek kart içinde saç teli bölmeler; yarıçap hiyerarşisi; kırıntı harf boşluklu büyük harf; geçiş 320 ms / `scale(0.86)` ve ileri gidişte sayfa başa sarar.
+
+**iOS özel:** `:active` sözde-sınıfı iOS Safari'de yalnız sayfada bir dokunma dinleyicisi varsa tetiklenir. BL-50'nin basılı geri bildirimleri telefonda bu yüzden hiç görünmemişti; boş bir `touchstart` dinleyicisi eklendi. Ayrıca `index.html` `theme-color` ve `manifest.webmanifest` renkleri yeni zemine çekildi.
+
+Ölçüm: açık temada en düşük kontrast 4.67:1, koyu temada 7.04:1, yatay taşma 0 px. Ayrıntı `BLOCKERS.md` **BL-51**.
+
+**Kalan:** telefonda Y-26…Y-31 (geçiş, aramada yanıp sönme, açık/koyu palet, "Hareketi Azalt", sürüm doğrulama, yeni tasarım).
 
 ### 7.1 Sıradaki iş adayları
 Kullanıcı yeni bir yön vermezse §4.2'deki büyük adaylardan biri seçilir. Görsel tarafta bir sonraki doğal adım **semantik metin vurgusu** (`14` §5): `renderText(text, spans?)` zaten tek geçiş noktası, tarih/istisna/kişi vurgusu oradan eklenebilir. Spec revizyonu gerektirmez ama içerik varlığına isteğe bağlı sunum notu ekler; önce `BLOCKERS.md`'ye yazılmalı.
