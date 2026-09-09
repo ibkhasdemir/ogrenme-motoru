@@ -87,6 +87,7 @@ Durum sütunu: ☐ denenmedi · ✓ geçti · ✗ kaldı (not yaz). Cihaz/sürü
 | Y-29 | Azaltılmış hareket | iOS Ayarlar → Erişilebilirlik → Hareket → "Hareketi Azalt" açıkken geçiş animasyonu **hiç** olmaz, ekranlar anında ve tam görünür gelir | ☐ | |
 | Y-30 | Yeni sürüme geçtiğinden emin ol | Uygulamayı öne al → "Yeni sürüm hazır · Yenile" çıkarsa **Yenile**'ye bas. Çıkmıyorsa uygulamayı tamamen kapatıp aç. Değişiklik görünmüyorsa büyük olasılıkla eski sürümdesin | ☐ | BL-51'de bu yaşandı |
 | Y-31 | Yeni tasarım (BL-51) | Okuma/soru metni **serif** (kitap harfi), arayüz metni sans; birincil düğme siyah kapsül (koyu temada beyaz); Bugün sayıları tek kart içinde üç bölme; kartların kalın kenarlığı yok | ☐ | |
+| Y-32 | Hareket katmanı (BL-52) | Ekran açılırken içerik yukarıdan sırayla yerine oturur; cevap sonrası "Doğru./Yanlış." yerine oturur ve doğru şık dolgusu belirir; uzun listede aşağı kayınca başlığın altında ince çizgi çıkar; "Hareketi Azalt" açıkken hiçbiri olmaz | ☐ | |
 | Y-10 | Atom ekranı → Çengel ekle | kendi kodlaman kaydedilir, kartta "Çengeli göster" ile çıkar; aynı metin ikinci kez "zaten var" | ☐ | |
 
 ## 4. Notlar

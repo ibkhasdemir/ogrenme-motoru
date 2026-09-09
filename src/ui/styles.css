@@ -77,7 +77,7 @@
   --elev-2: 0 2px 6px rgba(22, 23, 26, 0.07), 0 24px 48px -24px rgba(22, 23, 26, 0.34);
 
   /* --- motion (§7) --- */
-  --motion-fast: 140ms; --motion-base: 220ms; --motion-screen: 320ms;
+  --motion-fast: 140ms; --motion-base: 220ms; --motion-screen: 320ms; --motion-settle: 240ms;
   --motion-easing: cubic-bezier(0.2, 0, 0, 1);
 
   --touch-target: 48px;
@@ -104,7 +104,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) { :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-screen: 0ms; } }
+@media (prefers-reduced-motion: reduce) { :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-screen: 0ms; --motion-settle: 0ms; } }
 
 /* --- taban --- */
 * { box-sizing: border-box; }
@@ -257,7 +257,8 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
 }
 @supports not (backdrop-filter: blur(1px)) { .screen > .row:first-child { background: var(--color-background); } }
 .screen > .row:first-child > .text-title { margin: 0; }
-.screen > .row:first-child.is-stuck { border-bottom-color: var(--color-border); }
+.screen > .row:first-child { transition: border-color var(--motion-base) var(--motion-easing), box-shadow var(--motion-base) var(--motion-easing); }
+.screen > .row:first-child.is-stuck { border-bottom-color: var(--color-border); box-shadow: 0 8px 16px -16px rgba(0, 0, 0, 0.5); }
 
 .nav-bar { display: flex; gap: var(--space-2); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: var(--space-1); max-width: 100%; }
 .nav-bar::-webkit-scrollbar { display: none; }
@@ -286,12 +287,48 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
    hâlinde — tam görünür — kalır. Hareketin bozulması içeriği asla gizlememeli (§1 okunabilirlik > süs). */
 .screen-push { animation: screen-push var(--motion-screen) var(--motion-easing); transform-origin: var(--origin-x, 50%) var(--origin-y, 38%); }
 .screen-pop { animation: screen-pop var(--motion-screen) var(--motion-easing); transform-origin: 50% 38%; }
-.screen-fade { animation: screen-fade var(--motion-base) var(--motion-easing); }
-@keyframes screen-push { from { opacity: 0; transform: scale(0.86); } 65% { opacity: 1; } to { opacity: 1; transform: none; } }
+.screen-fade { animation: screen-fade var(--motion-fast) var(--motion-easing); }
+@keyframes screen-push { from { transform: scale(0.88); } to { transform: none; } }
 @keyframes screen-pop { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
-@keyframes screen-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes screen-fade { from { opacity: 0.4; } to { opacity: 1; } }
+
+/* İçerik yerleşmesi (kademeli varış). Kap büyürken içerik yukarıdan yerine oturur; okuma sırası hareketle de anlatılır.
+   Gecikme (animation-delay) BİLEREK kullanılmaz: gecikmeli girişte öğe önce görünür sonra kaybolur (titreme) ve
+   bunu ancak fill-mode gizler — fill-mode ise donmuş animasyonda içeriği yok eder (BL-50 dersi). Bunun yerine
+   hepsi aynı anda başlar, FARKLI SÜRELERDE varır: sıralama korunur, hiçbir kare boş kalmaz. */
+.screen-push > *, .screen-fade > * { animation: item-settle var(--motion-settle) var(--motion-easing); }
+.screen-push > *:nth-child(2), .screen-fade > *:nth-child(2) { animation-duration: calc(var(--motion-settle) + 40ms); }
+.screen-push > *:nth-child(3), .screen-fade > *:nth-child(3) { animation-duration: calc(var(--motion-settle) + 75ms); }
+.screen-push > *:nth-child(4), .screen-fade > *:nth-child(4) { animation-duration: calc(var(--motion-settle) + 105ms); }
+.screen-push > *:nth-child(5), .screen-fade > *:nth-child(5) { animation-duration: calc(var(--motion-settle) + 130ms); }
+.screen-push > *:nth-child(n+6), .screen-fade > *:nth-child(n+6) { animation-duration: calc(var(--motion-settle) + 150ms); }
+@keyframes item-settle { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* Cevap geri bildirimi (§14'ün ilk örneği): sonuç kelimesi yerine oturur, doğru/yanlış dolgusu belirir.
+   Ölçüm modunu bozmaz — bu hareket YALNIZ cevap açıldıktan sonraki ekranda vardır (§3, §10). */
+[data-phase="result"] .text-display, [data-phase="reason"] .text-display { animation: result-land var(--motion-base) var(--motion-easing); }
+@keyframes result-land { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
+.option.is-correct, .option.is-incorrect { animation: state-fill var(--motion-base) var(--motion-easing); }
+@keyframes state-fill { from { background-color: var(--color-surface); border-color: var(--color-border); } }
+.option.is-correct::after, .option.is-incorrect::after { animation: label-in var(--motion-base) var(--motion-easing); }
+@keyframes label-in { from { opacity: 0; transform: translateY(-50%) translateX(6px); } }
+.option.is-selected::before { animation: dot-pop var(--motion-fast) var(--motion-easing); }
+@keyframes dot-pop { from { transform: scale(0.4); } to { transform: none; } }
+
+/* Grup açılması: gövde "yeni içeriğin açılması" kalemine girer (§14) */
+details.group[open] > .group-body { animation: group-open var(--motion-base) var(--motion-easing); }
+@keyframes group-open { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* Geri al çubuğu ve bildirim: geçici yüzeyler alttan/üstten gelir, sonra sabit durur */
+.undo-bar { animation: bar-rise var(--motion-base) var(--motion-easing); }
+@keyframes bar-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   .screen-push, .screen-pop, .screen-fade { animation: none; }
+  .screen-push > *, .screen-fade > *,
+  [data-phase="result"] .text-display, [data-phase="reason"] .text-display,
+  .option.is-correct, .option.is-incorrect, .option.is-correct::after, .option.is-incorrect::after,
+  .option.is-selected::before, details.group[open] > .group-body, .undo-bar { animation: none; }
 }
 
 /* --- dar ekran (≈360 px): boşluklar orantılı, taşma yok --- */

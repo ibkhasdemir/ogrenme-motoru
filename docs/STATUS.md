@@ -7,7 +7,7 @@
 
 ## 1. Tek paragrafta durum
 
-Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **342 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
+Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FROZEN'e göre sıfırdan yazıldı (Yol B), 12 fazın hepsi bitti, üstüne sahibinin isteğiyle 7 spec-dışı özellik eklendi (hepsi `BLOCKERS.md`'de gerekçesiyle kayıtlı). Telefonda (iPhone, ana ekran uygulaması) gerçek kullanımda. **345 otomatik test yeşil**, build temiz, çalışma ağacı temiz, canlı sürüm yereldekiyle birebir aynı. Üç bağımsız denetim turunda toplam **20 gerçek hata** bulunup kapatıldı.
 
 | | |
 |---|---|
@@ -15,7 +15,7 @@ Kişisel öğrenme motoru v0 **çalışıyor ve yayında**. Spec paketi v1.6 FRO
 | Canlı adres | `https://ibkhasdemir.github.io/ogrenme-motoru/` |
 | Son commit | `76c6f11` · toplam 46 commit · etiket `v0.2.0` (Phase 12 kapanışında atıldı) |
 | Canlı build kimliği | `8c33c5f6276e` (yerel `dist/build-id.txt` ile aynı) |
-| Test | 35 dosya / 342 test yeşil |
+| Test | 35 dosya / 345 test yeşil |
 | Kaynak | 66 TypeScript dosyası, ~4.600 satır |
 | Uygulama sürümü | 0.2.0 · veri şeması 2 · yedek formatı 2 |
 
@@ -63,7 +63,7 @@ Gerçek iPhone kullanımından çıkanlar (`docs/PHONE_CHECK.md` §6'da F-1…F-
 | **BL-46** | **Kaydırıp arşivle / arşiv görünümü / koşullu kalıcı silme** | Kalıcı silme yalnız hiç ölçülmemiş, sorusu ve başka bağı olmayan atomda |
 | **BL-47** | **Okuma → ilk deneme boşluğu** — en az 2 öğe ya da 2 dk | Kullanıcı "konu veriyor hemen ardından soru" dedi; oturum penceresi, scheduler kararı değil |
 
-Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk), **BL-48** (görsel cila + yatay taşma düzeltmesi), **BL-50** (dokunulan noktadan açılan ekran geçişi) ve **BL-51** (tasarım sisteminin yeniden yazılması: serif öğrenme metni, mürekkep birincil eylem, kenarlıksız kartlar).
+Ayrıca **BL-45** (geri hareketi: `pushState`/`popstate`, yapışkan başlık, kaydırmalı alt çubuk), **BL-48** (görsel cila + yatay taşma düzeltmesi), **BL-50** (dokunulan noktadan açılan ekran geçişi) ve **BL-51** (tasarım sisteminin yeniden yazılması: serif öğrenme metni, mürekkep birincil eylem, kenarlıksız kartlar) ve **BL-52** (hareket katmanı: kademeli varış, cevap geri bildirimi, yapışkan başlık durumu).
 
 ### 2.5 Bağımsız denetimler — 3 tur, 20 gerçek hata
 Her tur: ayrı bir ajan spec'i okur, kodu inceler, iddiaları repoda koşturur; bulunan her hata için gerileme testi yazıldı.
@@ -195,7 +195,14 @@ Kullanıcı BL-50'den sonra **"hiçbiri olmamış, ultra premium istiyorum"** de
 
 Ölçüm: açık temada en düşük kontrast 4.67:1, koyu temada 7.04:1, yatay taşma 0 px. Ayrıntı `BLOCKERS.md` **BL-51**.
 
-**Kalan:** telefonda Y-26…Y-31 (geçiş, aramada yanıp sönme, açık/koyu palet, "Hareketi Azalt", sürüm doğrulama, yeni tasarım).
+### 7.3 Üçüncü tur — BL-52 hareket katmanı
+Kullanıcı tasarımı onayladı, "animasyonlar eksik" dedi. `14` §14 hareketi bir listeyle sınırlar (cevap geri bildirimi, kart geçişi, durum değişimi, yeni içeriğin açılması, sheet, ilerleme) ve bounce/konfeti/oyunlaştırmayı yasaklar; `10` §1 de "süs amaçlı ağır animasyon"u non-goal sayar. Bu turda **listenin izin verdiği ama hiç kullanılmamış** yerler dolduruldu: kademeli varış, cevap geri bildirimi (sonuç kelimesi + doğru/yanlış dolgusu), seçim noktası, grup açılışı, geri al çubuğu, yapışkan başlık durumu.
+
+İki kalıcı ders:
+- **`animation-delay` kullanma.** Gecikmeli girişte öğe önce görünür sonra kaybolur; bunu ancak `fill-mode` gizler, `fill-mode` ise donmuş animasyonda içeriği yok eder (BL-50). Çözüm: hepsi aynı anda başlar, **farklı sürelerde varır**. Test bunu bekçiler.
+- **`.is-stuck` ölü kuraldı.** BL-45'te CSS'e yazılmış, hiçbir yerde açılmamıştı. Yeni bir görsel kural yazarken "bunu kim açıyor?" sorusu sorulmalı.
+
+**Kalan:** telefonda Y-26…Y-32 (geçiş, aramada yanıp sönme, açık/koyu palet, "Hareketi Azalt", sürüm doğrulama, yeni tasarım, hareket katmanı).
 
 ### 7.1 Sıradaki iş adayları
 Kullanıcı yeni bir yön vermezse §4.2'deki büyük adaylardan biri seçilir. Görsel tarafta bir sonraki doğal adım **semantik metin vurgusu** (`14` §5): `renderText(text, spans?)` zaten tek geçiş noktası, tarih/istisna/kişi vurgusu oradan eklenebilir. Spec revizyonu gerektirmez ama içerik varlığına isteğe bağlı sunum notu ekler; önce `BLOCKERS.md`'ye yazılmalı.

@@ -125,6 +125,32 @@ describe('BL-50 — ekran geçişi', () => {
   })
 })
 
+describe('BL-52 — yapışkan başlık durumu', () => {
+  it('sayfa kayınca başlık ayırıcı çizgiyi alır, tepeye dönünce bırakır', async () => {
+    await app()
+    await click(byText('İçerik'))
+    const header = document.querySelector('.screen > .row:first-child')
+    expect(header).not.toBeNull()
+    expect(header!.classList.contains('is-stuck')).toBe(false)
+    const scroller = document.scrollingElement ?? document.documentElement
+    scroller.scrollTop = 120
+    window.dispatchEvent(new Event('scroll'))
+    expect(header!.classList.contains('is-stuck')).toBe(true)
+    scroller.scrollTop = 0
+    window.dispatchEvent(new Event('scroll'))
+    expect(header!.classList.contains('is-stuck')).toBe(false)
+  })
+
+  it('uygulama kapanınca kaydırma dinleyicisi kalmaz', async () => {
+    const removed: string[] = []
+    const spy = vi.spyOn(window, 'removeEventListener').mockImplementation(((type: string) => { removed.push(type) }) as never)
+    await app()
+    handle!.destroy(); handle = null
+    spy.mockRestore()
+    expect(removed).toContain('scroll')
+  })
+})
+
 describe('BL-50 — hareket içeriği asla gizlemez (14 §1: okunabilirlik > süs)', () => {
   const css = readFileSync(join(ROOT, 'src', 'ui', 'styles.css'), 'utf8')
 
@@ -138,6 +164,16 @@ describe('BL-50 — hareket içeriği asla gizlemez (14 §1: okunabilirlik > sü
   it('azaltılmış hareket tercihi üç geçişi de kapatır (§14)', () => {
     const block = css.slice(css.indexOf('.screen-push, .screen-pop, .screen-fade'))
     expect(block.slice(0, 80)).toMatch(/animation:\s*none/)
+  })
+
+  it('kademeli varış animation-delay KULLANMAZ (gecikme + fill-mode ikilemine düşmemek için)', () => {
+    const lines = css.split(String.fromCharCode(10)).map((l) => l.trim())
+    const cascade = lines.filter((l) => l.startsWith('.screen-push > *') || l.startsWith('.screen-fade > *'))
+    expect(cascade.length).toBeGreaterThanOrEqual(6)
+    for (const rule of cascade) {
+      expect(rule).not.toContain('animation-delay')
+      for (const fill of ['both', 'backwards', 'forwards']) expect(rule).not.toContain(` ${fill};`)
+    }
   })
 
   it('ham hex YALNIZ :root bloklarında (11 kural 38): bileşenler token adı bilir', () => {

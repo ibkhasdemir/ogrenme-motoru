@@ -99,6 +99,17 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
   // Geçiş animasyonu (14 §14): yön duygusu. İleri gidiş dokunulan noktadan büyür, geri gidiş küçülerek gelir, aynı
   // ekranın adımları yumuşak belirir. Aynı ekranın yeniden çizimi (yazarken) sessizdir — bu yüzden anahtarla karşılaştırılır.
   const untrackTouch = trackTouchOrigin()
+
+  // Yapışkan başlık, içerik altından geçmeye başlayınca saç teli çizgi + çok hafif gölge alır (14 §11, §16).
+  // Böylece "sayfa kaydı mı" sorusu görsel olarak yanıtlanır; çizgi tepedeyken görünmez, gereksiz çerçeve olmaz.
+  const onScroll = (): void => {
+    const header = root.querySelector<HTMLElement>('.screen > .row:first-child')
+    if (!header) return
+    const scroller = document.scrollingElement ?? document.documentElement
+    header.classList.toggle('is-stuck', (scroller?.scrollTop ?? 0) > 4)
+  }
+  const scrollOk = typeof window !== 'undefined' && typeof window.addEventListener === 'function'
+  if (scrollOk) window.addEventListener('scroll', onScroll, { passive: true })
   let poppedTransition = false
   let lastPushKey = 'today'
   let lastFadeKey = ''
@@ -314,6 +325,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
     } else if (undoBar && !tokenAlive(undoBar.token)) undoBar = null
     root.appendChild(el)
     applyScreenTransition(el, nextTransition())
+    onScroll()
     restoreOpenPanels(openPanels)
     restoreFocus(savedFocus)
   }
@@ -630,6 +642,7 @@ export function mountApp(root: HTMLElement, deps: AppDeps): AppHandle {
       if (historyOk) window.removeEventListener('popstate', onPopState)
       if (undoTimer) clearTimeout(undoTimer)
       untrackTouch()
+      if (scrollOk) window.removeEventListener('scroll', onScroll)
       unsubscribeUpdates?.()
       clear(root)
     },

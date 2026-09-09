@@ -188,6 +188,20 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Spec revizyonu gerekmedi: token **adları** ve semantik rol adları aynı; değişen değerler ve iki yeni UI token (`--color-action`, `--color-action-contrast`, `--card-border`, `--motion-screen`, `--font-serif`). `14` §2 "bugün seçilen hex'ler değişebilir; rol adları değişmez" der.
 - Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (13; ham hex'in yalnız `:root`'ta kalmasını da bekçiler). Telefon kontrolü: `docs/PHONE_CHECK.md` Y-26…Y-31.
 
+### BL-52 — Hareket katmanı: kademeli varış, cevap geri bildirimi, yapışkan başlık durumu (2026-09-09)
+- Bölüm: `14` §14 (hareketin izinli yerleri ve yasakları), §11, §16; `10` §1 ("süs amaçlı ağır animasyon" yasağı, oyunlaştırma yasağı).
+- Gözlem: kullanıcı yeni tasarımı onayladı ("olmuş") ama **"animasyonlar eksik, farklı şeyler olsun, göze hitap etsin"** dedi.
+- Karar: `14` §14 hareketi bir yerler listesiyle sınırlar — cevap geri bildirimi, kart geçişi, doğru/yanlış durum değişimi, yeni içeriğin açılması, sheet, ilerleme — ve **bounce, konfeti, sürekli hareket, oyunlaştırma animasyonunu açıkça yasaklar**; `10` §1 da "süs amaçlı ağır animasyon"u non-goal sayar. Bu turda **listenin izin verdiği ama hiç kullanılmamış** yerler dolduruldu; yasak kalemlere girilmedi. Kullanıcı spec sahibidir; daha gösterişli hareket isterse `14` §14 revizyonu gerekir (BLOCKERS'a not düşülür).
+- Eklenenler:
+  1. **Kademeli varış.** Ekran açılırken kap dokunulan noktadan büyür, çocuklar yukarıdan yerine oturur. **Kritik uygulama detayı:** `animation-delay` KULLANILMADI. Gecikmeli girişte öğe önce görünür sonra kaybolur (titreme) ve bunu ancak `fill-mode` gizler — `fill-mode` ise donmuş animasyonda içeriği yok eder (BL-50'de yaşandı). Bunun yerine hepsi aynı anda başlar, **farklı sürelerde varır** (240 → 390 ms): sıralama korunur, hiçbir kare boş kalmaz, fill-mode'a gerek kalmaz. Gerileme testi bu kuralı bekçiler.
+  2. **Cevap geri bildirimi** (§14'ün ilk örneği): sonuç kelimesi ("Doğru." / "Yanlış.") ölçekle yerine oturur; doğru/yanlış seçeneğin dolgusu ve "✓ doğru" etiketi belirir. Bu hareket YALNIZ cevap açıldıktan sonraki ekranda vardır — ölçüm modu (§3, §10) bozulmaz, hiçbir hareket cevabı önceden ele vermez.
+  3. **Seçim noktası** dokununca ölçekle yerleşir (dot-pop).
+  4. **Grup açılması** (İçerik dizini) "yeni içeriğin açılması" kalemine göre yumuşadı.
+  5. **Geri al çubuğu** alttan gelir.
+  6. **Yapışkan başlık durumu:** `.is-stuck` sınıfı CSS'te vardı ama **hiçbir yerde açılmıyordu** (ölü kural, BL-45'ten kalma). Kaydırma dinleyicisiyle bağlandı: içerik başlığın altından geçmeye başlayınca saç teli çizgi + çok hafif gölge gelir, tepeye dönünce gider.
+- Sınır: hepsi ≤ 390 ms, hiçbiri döngüsel değil, `prefers-reduced-motion` hepsini kapatır (tek blokta toplandı).
+- Durum: **KAPANDI**. Testler: `tests/phase20-visual-polish.test.ts` (16). Telefon kontrolü: Y-32.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).
