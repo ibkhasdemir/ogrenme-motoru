@@ -215,7 +215,18 @@ Kabuk `aria-hidden` + `pointer-events: none`, bitişte ve emniyet zaman aşımı
 
 **BL-54 ilk denemede okunmuyordu, BL-55'te düzeltildi.** İki sebep: (a) ikincil düğmenin zemini beyaz, sayfa zemini kâğıt beyazı — büyüyen kabuk görünmüyordu; (b) içerik dokunulan taraftan bağımsız olarak hep aşağıdan geliyordu. Yama: kabuğun arkasına ekranı bir anlığına kısan **perde** (`--scrim`), kabuğa güçlü gölge (`--elev-2`), ve geliş yönünü dokunuş yerine bağlayan `--settle-dy`.
 
-**Kalan:** telefonda Y-26…Y-33.
+### 7.5 Beşinci tur — BL-56 koyu palet + cam dili
+Kullanıcı: *"renk paletini koyulaştırman lazım, daha güzel semboller kullan, biraz da yapay duruyor"* ve *"iOS 26 ile gelen cam efekti; efekt çerçevesi cam olursa... var olan efekti biraz yavaşlatıp kenarlarına cam koy, alttaki kayan butonlara da ekleyebilirsin."*
+
+- **Palet koyulaştı ve ısındı**: zemin `#e6e1d6`, kart **saf beyaz değil** (`#faf8f4`), mürekkep sıcak (`#191712`). Koyu tema `#0b0a09`.
+- **"Yapay duruyor"un sebebi: her şey yüzüyordu.** İkincil düğme, çip, grup satırı hepsi gölgeliydi. Gölge artık yalnız kart, birincil eylem ve geçici çubuklarda.
+- **Cam dili**: büyüyen kabuk camdır (yarı saydam tint + `blur(20px)` + ışık halkası + üst parıltı); alt gezinme **tek yapışkan cam çubuk** oldu; başlık, geri al çubuğu ve perde aynı tarifi kullanır. Hepsinin `@supports` düşüşü var.
+- **Hareket yavaşladı**: ekran 320 → 420 ms, kabuk 340 → 460 ms, kademeli varış 240 → 300 ms.
+- **Simgeler yeniden çizildi** (tek ızgara, tek çizgi kalınlığı). `.group-sub` kullanıcı içeriğini büyük harfe çeviriyordu — Türkçe i/İ bozulduğu için kaldırıldı.
+
+Ölçüm: açık temada en düşük kontrast 4.68:1, koyu temada 6.84:1, yatay taşma 0.
+
+**Kalan:** telefonda Y-26…Y-34.
 
 ### 7.1 Sıradaki iş adayları
 Kullanıcı yeni bir yön vermezse §4.2'deki büyük adaylardan biri seçilir. Görsel tarafta bir sonraki doğal adım **semantik metin vurgusu** (`14` §5): `renderText(text, spans?)` zaten tek geçiş noktası, tarih/istisna/kişi vurgusu oradan eklenebilir. Spec revizyonu gerektirmez ama içerik varlığına isteğe bağlı sunum notu ekler; önce `BLOCKERS.md`'ye yazılmalı.

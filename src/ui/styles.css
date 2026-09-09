@@ -14,19 +14,19 @@
   color-scheme: light dark;
 
   /* --- color: yüzeyler --- */
-  --color-background: #f1efe9;      /* sıcak kâğıt zemin */
-  --color-surface: #ffffff;         /* kart / okuma yüzeyi */
-  --color-surface-elevated: #ffffff;/* sheet, yapışkan çubuk */
-  --color-surface-sunken: #e9e6de;  /* girinti: şablon bloğu */
-  --color-text-primary: #16171a;
-  --color-text-secondary: #63656b;
-  --color-border: #e3dfd6;          /* saç teli çizgi; kart kenarı DEĞİL */
+  --color-background: #e6e1d6;      /* koyulaştırılmış sıcak kum zemin — kart bunun üzerinde gerçekten yükselir */
+  --color-surface: #faf8f4;         /* kart / okuma yüzeyi: SAF BEYAZ DEĞİL (saf beyaz yüzey ekranı yapaylaştırır) */
+  --color-surface-elevated: #fffdfa; /* en üst katman (sheet, yapışkan çubuk) yalnızca burada beyaza yaklaşır */
+  --color-surface-sunken: #e1dbcd;  /* girinti: şablon bloğu (ikincil metin burada da AA geçmeli) */
+  --color-text-primary: #191712;    /* sıcak mürekkep — nötr siyah soğuk ve sentetik durur */
+  --color-text-secondary: #635e51;
+  --color-border: #d2ccbc;          /* saç teli çizgi; zemin koyulaşınca kenar da görünür olmalı */
   --card-border: transparent;       /* açık temada kart kenarlıksız (koyu temada saç teli olur) */
 
   /* --- color: eylem (nötr mürekkep) ile anlam (vurgu) ayrıdır --- */
-  --color-action: #1b1c20;
-  --color-action-contrast: #ffffff;
-  --color-accent: #1e4f86;
+  --color-action: #1c1a14;
+  --color-action-contrast: #faf8f4;
+  --color-accent: #1b4877;
   --color-accent-contrast: #ffffff;
   --color-success: #1f6438;
   --color-error: #9c3326;
@@ -34,7 +34,7 @@
 
   /* --- semantik hafıza renkleri (§2, §7) — UI katmanı; domain bilmez --- */
   --memory-date: #7a4b16;
-  --memory-entity: #1e4f86;
+  --memory-entity: #1b4877;
   --memory-place: #1f6360;
   --memory-cause: #5e4489;
   --memory-consequence: #48591f;
@@ -45,11 +45,11 @@
   --memory-hook: #4e3b83;
   --memory-source: #45526b;
   --state-correct: #1f6438;
-  --state-correct-bg: #e7f2ea;
+  --state-correct-bg: #dfeee4;
   --state-incorrect: #9c3326;
-  --state-incorrect-bg: #fae8e4;
+  --state-incorrect-bg: #f6e0da;
   --state-uncertain: #7a4e0c;
-  --state-uncertain-bg: #f7eeda;
+  --state-uncertain-bg: #f2e6cd;
 
   /* --- spacing --- */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-7: 32px; --space-8: 40px;
@@ -77,7 +77,7 @@
   --elev-2: 0 2px 6px rgba(22, 23, 26, 0.07), 0 24px 48px -24px rgba(22, 23, 26, 0.34);
 
   /* --- motion (§7) --- */
-  --motion-fast: 140ms; --motion-base: 220ms; --motion-screen: 320ms; --motion-settle: 240ms;
+  --motion-fast: 140ms; --motion-base: 220ms; --motion-screen: 420ms; --motion-settle: 300ms;
   --motion-easing: cubic-bezier(0.2, 0, 0, 1);
 
   --touch-target: 48px;
@@ -85,25 +85,34 @@
   --font-serif: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --focus-ring: 3px solid var(--color-accent);
   /* kabuk büyürken zemini bir anlığına kısan perde (BL-55) */
-  --scrim: rgba(22, 23, 26, 0.16);
+  --scrim: rgba(25, 23, 18, 0.2);
+  /* kâğıdın üst kenarındaki ince ışık — yüzeyi zeminden ayıran ikinci ipucu */
+  --edge-light: rgba(255, 255, 255, 0.55);
+  /* cam yüzey: kenardaki ışık halkası ("çerçeve cam olsun") ve içerideki üst parıltı */
+  --glass-rim: rgba(255, 255, 255, 0.7);
+  --glass-sheen: rgba(255, 255, 255, 0.45);
+  --glass-blur: saturate(180%) blur(20px);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: #0e0f11; --color-surface: #17181b; --color-surface-elevated: #1e2024; --color-surface-sunken: #121316;
-    --color-text-primary: #f2f2f4; --color-text-secondary: #a1a3a9; --color-border: #2a2c31;
-    --card-border: #24262b; /* koyu zeminde kart saç teli kenarla ayrışır */
-    --color-action: #f0f1f3; --color-action-contrast: #121316;
-    --color-accent: #8fb9e8; --color-accent-contrast: #0c1219;
+    --color-background: #0b0a09; --color-surface: #171512; --color-surface-elevated: #201d19; --color-surface-sunken: #100f0d;
+    --color-text-primary: #f3f0ea; --color-text-secondary: #a49e91; --color-border: #2c2823;
+    --card-border: #262219; /* koyu zeminde kart saç teli kenarla ayrışır */
+    --color-action: #f3f0ea; --color-action-contrast: #171512;
+    --color-accent: #93bce9; --color-accent-contrast: #0b1119;
     --color-success: #8fd0a0; --color-error: #e89d90; --color-warning: #dbb56d;
-    --memory-date: #d9ab6e; --memory-entity: #8fb9e8; --memory-place: #86c4c2; --memory-cause: #b8a4e3; --memory-consequence: #b3c68a;
+    --memory-date: #d9ab6e; --memory-entity: #93bce9; --memory-place: #86c4c2; --memory-cause: #b8a4e3; --memory-consequence: #b3c68a;
     --memory-exception: #e89d90; --memory-warning: #dbb56d; --memory-misconception: #e096bd; --memory-confusable: #b8a4e3;
     --memory-hook: #b9aae4; --memory-source: #a7b3c9;
     --state-correct: #8fd0a0; --state-correct-bg: #172c1f; --state-incorrect: #e89d90; --state-incorrect-bg: #331e1b;
     --state-uncertain: #dbb56d; --state-uncertain-bg: #322815;
     --elev-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 28px -18px rgba(0, 0, 0, 0.9);
     --elev-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 24px 48px -24px rgba(0, 0, 0, 0.95);
-    --scrim: rgba(0, 0, 0, 0.5);
+    --scrim: rgba(0, 0, 0, 0.55);
+    --edge-light: rgba(255, 255, 255, 0.045);
+    --glass-rim: rgba(255, 255, 255, 0.14);
+    --glass-sheen: rgba(255, 255, 255, 0.07);
   }
 }
 
@@ -138,6 +147,8 @@ ul.stack { list-style: none; padding: 0; margin: 0; }
 .row { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
 .stack { display: flex; flex-direction: column; gap: var(--space-2); }
 .card { background: var(--color-surface); border: 1px solid var(--card-border); border-radius: var(--radius-lg); padding: var(--space-5); box-shadow: var(--elev-1); }
+/* Kenarlıksız kartın kenarı, koyulaşan zeminde ince bir üst ışıkla belirir (kâğıdın kalınlığı) */
+.card, .counts { background-image: linear-gradient(var(--edge-light), transparent 42%); }
 section.card { gap: var(--space-3); }
 .card > .text-section:first-child { margin-bottom: var(--space-1); }
 
@@ -150,13 +161,13 @@ section.card { gap: var(--space-3); }
   background: var(--color-surface); color: var(--color-text-primary);
   font: inherit; font-size: var(--type-button); font-weight: var(--weight-medium); line-height: 1.3;
   text-align: left; cursor: pointer; width: 100%;
-  box-shadow: var(--elev-1);
+  box-shadow: var(--elev-0); /* ikincil düğme YÜZMEZ: koyulaşan zeminde saç teli kenar yeter (her şey yüzerse hiçbiri öne çıkmaz) */
   transition: background var(--motion-fast) var(--motion-easing), border-color var(--motion-fast) var(--motion-easing),
               transform var(--motion-fast) var(--motion-easing), box-shadow var(--motion-fast) var(--motion-easing),
               opacity var(--motion-fast) var(--motion-easing);
   -webkit-tap-highlight-color: transparent;
 }
-.btn:active { transform: scale(0.965); box-shadow: var(--elev-0); }
+.btn:active { transform: scale(0.965); background: color-mix(in srgb, var(--color-text-primary) 7%, var(--color-surface)); }
 .btn-primary { background: var(--color-action); color: var(--color-action-contrast); border-color: var(--color-action); justify-content: center; text-align: center; font-weight: var(--weight-semibold); box-shadow: var(--elev-2); }
 .btn-primary:active { box-shadow: var(--elev-0); opacity: 0.9; }
 .btn-quiet { background: transparent; border-color: transparent; color: var(--color-text-secondary); box-shadow: none; }
@@ -187,7 +198,7 @@ section.card { gap: var(--space-3); }
 .result-uncertain { color: var(--state-uncertain); }
 
 /* --- çip (S6, S9): tek dokunuş --- */
-.chip { display: inline-flex; align-items: center; min-height: 44px; padding: var(--space-2) var(--space-5); border-radius: var(--radius-pill); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--type-body); cursor: pointer; box-shadow: var(--elev-1); -webkit-tap-highlight-color: transparent; transition: background var(--motion-fast) var(--motion-easing), border-color var(--motion-fast) var(--motion-easing), transform var(--motion-fast) var(--motion-easing); }
+.chip { display: inline-flex; align-items: center; min-height: 44px; padding: var(--space-2) var(--space-5); border-radius: var(--radius-pill); border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary); font: inherit; font-size: var(--type-body); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background var(--motion-fast) var(--motion-easing), border-color var(--motion-fast) var(--motion-easing), transform var(--motion-fast) var(--motion-easing); }
 .chip:active { transform: scale(0.96); }
 .chip.is-on { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-accent-contrast); }
 
@@ -218,7 +229,9 @@ select.input[multiple] { min-height: 96px; }
 input[type="radio"] { width: 24px; height: 24px; margin: 0; accent-color: var(--color-accent); flex: none; }
 
 /* --- geri al çubuğu (S7 → sonraki ekran, BL-11): birincil eylemle bitişik değil --- */
-.undo-bar { position: sticky; bottom: calc(var(--space-2) + env(safe-area-inset-bottom)); margin-top: var(--space-7); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5); background: var(--color-surface-elevated); border: 1px solid var(--card-border); border-radius: var(--radius-pill); box-shadow: var(--elev-2); }
+/* Cam çubuk: altındaki içerik bulanık geçer (14 §16). Desteklenmiyorsa opak yüzeye düşer — okunurluk hiç riske girmez. */
+.undo-bar { position: sticky; bottom: calc(var(--space-2) + env(safe-area-inset-bottom)); margin-top: var(--space-7); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5); background: color-mix(in srgb, var(--color-surface-elevated) 72%, transparent); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-rim); border-radius: var(--radius-pill); box-shadow: var(--elev-2); }
+@supports not (backdrop-filter: blur(1px)) { .undo-bar { background: var(--color-surface-elevated); } }
 
 /* --- listeler (S11): satır dokunulabilir olduğunu göstersin, basınca cevap versin --- */
 .list-item { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: var(--space-3); border: 0; border-radius: var(--radius-md); width: 100%; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; box-shadow: inset 0 -1px 0 var(--color-border); transition: background var(--motion-fast) var(--motion-easing); -webkit-tap-highlight-color: transparent; }
@@ -232,7 +245,7 @@ input[type="radio"] { width: 24px; height: 24px; margin: 0; accent-color: var(--
 .import-template { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--type-support); line-height: var(--lh-support); color: var(--color-text-secondary); background: var(--color-surface-sunken); border: 0; border-radius: var(--radius-md); padding: var(--space-4); margin: var(--space-2) 0 0; }
 
 /* S11 İçerik: Ders › Konu grupları (dizin görünümü). Özet satırı dokunma hedefi boyunda; gövde girintili. */
-details.group { background: var(--color-surface); border: 1px solid var(--card-border); border-radius: var(--radius-md); box-shadow: var(--elev-1); }
+details.group { background: var(--color-surface); border: 1px solid var(--card-border); border-radius: var(--radius-md); }
 details.group > summary.group-summary { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); min-height: var(--touch-target); padding: var(--space-3) var(--space-4); cursor: pointer; list-style: none; border-radius: var(--radius-md); transition: background var(--motion-fast) var(--motion-easing); -webkit-tap-highlight-color: transparent; }
 details.group > summary.group-summary:active { background: color-mix(in srgb, var(--color-text-primary) 6%, transparent); }
 details.group > summary.group-summary::-webkit-details-marker { display: none; }
@@ -241,8 +254,9 @@ details.group[open] > summary.group-summary::before { content: '▾'; }
 details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
 
 /* S11 alt başlık etiketi ve S11c konu satırı (BL-39) */
-.group-sub { margin: var(--space-3) 0 var(--space-1); font-size: var(--type-micro); line-height: var(--lh-support); color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); font-weight: var(--weight-semibold); border-left: 2px solid var(--color-border); padding-left: var(--space-2); }
-.topic-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--card-border); border-radius: var(--radius-md); box-shadow: var(--elev-1); }
+/* Alt başlık KULLANICI İÇERİĞİDİR: büyük harfe çevrilmez (Türkçe'de i/İ bozulur ve özel ad görünümü kaybolur). */
+.group-sub { margin: var(--space-3) 0 var(--space-1); font-size: var(--type-support); line-height: var(--lh-support); color: var(--color-text-secondary); font-weight: var(--weight-medium); border-left: 2px solid var(--color-border); padding-left: var(--space-2); }
+.topic-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--card-border); border-radius: var(--radius-md); }
 .topic-row::after { content: none; }
 .topic-row input[type="checkbox"] { width: 1.4rem; height: 1.4rem; flex: none; accent-color: var(--color-accent); }
 
@@ -253,8 +267,8 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
   position: sticky; top: 0; z-index: 2;
   margin: calc(-1 * var(--space-3)) 0;
   padding: var(--space-3) 0;
-  background: color-mix(in srgb, var(--color-background) 78%, transparent);
-  backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px);
+  background: color-mix(in srgb, var(--color-background) 72%, transparent);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid transparent;
   flex-wrap: nowrap; align-items: center; gap: var(--space-3);
 }
@@ -263,9 +277,24 @@ details.group > .group-body { padding: 0 var(--space-3) var(--space-3); }
 .screen > .row:first-child { transition: border-color var(--motion-base) var(--motion-easing), box-shadow var(--motion-base) var(--motion-easing); }
 .screen > .row:first-child.is-stuck { border-bottom-color: var(--color-border); box-shadow: 0 8px 16px -16px rgba(0, 0, 0, 0.5); }
 
-.nav-bar { display: flex; gap: var(--space-2); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: var(--space-1); max-width: 100%; }
+/* Alt gezinme: ayrı ayrı yüzen yedi düğme yerine TEK CAM ÇUBUK. Yapışkandır ki içerik altından geçsin —
+   bulanıklığın gösterecek bir şeyi olsun (aksi hâlde cam, sabit zemin üstünde yalnız bir çerçevedir). */
+.nav-bar {
+  display: flex; gap: var(--space-1); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  max-width: 100%;
+  position: sticky; bottom: max(var(--space-1), env(safe-area-inset-bottom));
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface-elevated) 60%, transparent);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-rim);
+  box-shadow: var(--elev-2), inset 0 1px 0 var(--glass-sheen);
+}
+@supports not (backdrop-filter: blur(1px)) { .nav-bar { background: var(--color-surface-elevated); } }
 .nav-bar::-webkit-scrollbar { display: none; }
-.nav-bar > .btn { flex: 0 0 auto; white-space: nowrap; padding-inline: var(--space-5); }
+/* Çubuğun içindeki düğmeler kendi yüzeyini taşımaz: cam kabuk zaten yüzeydir */
+.nav-bar > .btn { flex: 0 0 auto; white-space: nowrap; padding-inline: var(--space-4); background: transparent; border-color: transparent; box-shadow: none; }
+.nav-bar > .btn:active { background: color-mix(in srgb, var(--color-text-primary) 9%, transparent); }
 .nav-badge { margin-left: var(--space-2); padding: 1px var(--space-2); border-radius: var(--radius-pill); background: var(--color-accent); color: var(--color-accent-contrast); font-size: var(--type-micro); font-weight: var(--weight-semibold); }
 
 /* --- BL-46 kaydırıp arşivle/sil (iOS alışkanlığı). Hareket tek yol değildir: aynı eylem atom ekranında da vardır. --- */
@@ -348,9 +377,21 @@ details.group[open] > .group-body { animation: group-open var(--motion-base) var
    Kabuk kurulduğunda kabın kendi ölçek animasyonu susar; içeriğin kademeli varışı sürer (transition.ts).
    Kabuk ve perde geçici katmanlardır: dokunmayı ENGELLEMEZ ve transition.ts tarafından mutlaka silinir. */
 .screen-push.is-morphing { animation: none; }
-.morph-shell { position: fixed; z-index: 9; pointer-events: none; box-shadow: var(--elev-2); }
-.morph-scrim { position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--scrim); }
+/* Kabuk CAMDIR (iOS 26 dili): arkasındaki sayfa bulanık geçer, kenarında ışık halkası vardır, içeride üst parıltı.
+   Rengi dokunulan tuştan gelir ama YARI SAYDAM karışır (`--shell-tint`), böylece büyürken ekranı boyamaz. */
+.morph-shell {
+  position: fixed; z-index: 9; pointer-events: none;
+  background: color-mix(in srgb, var(--shell-tint, var(--color-surface)) 42%, transparent);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-rim);
+  box-shadow: var(--elev-2), inset 0 1px 0 var(--glass-sheen);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .morph-shell { background: color-mix(in srgb, var(--shell-tint, var(--color-surface)) 88%, transparent); }
+}
+/* Perde camdır: zemini yalnız karartmaz, hafifçe bulanıklaştırır — büyüyen kabuk her renk zeminde okunur (BL-56). */
+.morph-scrim { position: fixed; inset: 0; z-index: 8; pointer-events: none; background: var(--scrim); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 
 /* Simge: düğme metniyle aynı renkte, metinle aynı optik ağırlıkta; tek başına anlam taşımaz (14 §9) */
-.icon { width: 1.15em; height: 1.15em; flex: 0 0 auto; opacity: 0.85; }
+.icon { width: 1.25em; height: 1.25em; flex: 0 0 auto; opacity: 0.9; }
 .btn-primary > .icon { opacity: 1; }

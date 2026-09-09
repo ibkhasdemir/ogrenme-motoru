@@ -19,7 +19,7 @@ const POINT_TTL_MS = 1500
 /** animationend gelmezse sınıfın en geç düşeceği süre (motion-base'in birkaç katı). */
 const CLEANUP_MS = 900
 /** kabuk büyümesinin süresi (ms) — ekran geçişinden biraz uzun, çünkü yol da uzun */
-const MORPH_MS = 340
+const MORPH_MS = 460
 
 /** Dokunuş noktasını izlemeye başlar; döndürdüğü işlev dinleyiciyi kaldırır. */
 export function trackTouchOrigin(): () => void {
@@ -50,10 +50,14 @@ function boxOf(target: EventTarget | null): TouchOrigin['box'] {
   const r = el.getBoundingClientRect()
   if (!(r.width > 0 && r.height > 0)) return null
   const cs = typeof getComputedStyle === 'function' ? getComputedStyle(el) : null
+  // Öğenin kendi zemini saydam olabilir (cam gezinme çubuğunun içindeki düğmeler böyle). O zaman renk verilmez ve
+  // cam kabuk CSS'teki varsayılan yüzey tonuna düşer — saydam bir tonla karıştırılırsa kabuk tamamen kaybolurdu.
+  const bg = (cs && cs.backgroundColor) || ''
+  const opaque = bg && bg !== 'transparent' && !bg.replace(/\s/g, '').endsWith(',0)')
   return {
     top: r.top, left: r.left, width: r.width, height: r.height,
     radius: (cs && cs.borderRadius) || '999px',
-    background: (cs && cs.backgroundColor) || 'transparent',
+    background: opaque ? bg : '',
     shadow: cs && cs.boxShadow && cs.boxShadow !== 'none' ? cs.boxShadow : 'none',
   }
 }
@@ -97,18 +101,19 @@ function morphFromBox(el: HTMLElement, box: NonNullable<TouchOrigin['box']>): ((
   // Yalnız geometri ve renk satır içi; gölge CSS'te (tuşun kendi zayıf gölgesi büyüyünce kaybolur, kabuğa güçlüsü gerekir).
   shell.style.cssText = [
     `left:${box.left}px`, `top:${box.top}px`, `width:${box.width}px`, `height:${box.height}px`,
-    `border-radius:${box.radius}`, `background:${box.background}`,
+    `border-radius:${box.radius}`,
+    ...(box.background ? [`--shell-tint:${box.background}`] : []),
   ].join(';')
   document.body.appendChild(shell)
 
   const easing = 'cubic-bezier(0.2, 0, 0, 1)'
   const shellAnim = shell.animate([
     { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, borderRadius: box.radius, opacity: 1 },
-    { opacity: 0.5, offset: 0.35 },
-    { opacity: 0, offset: 0.72 },
+    { opacity: 1, offset: 0.5 },
     { left: '0px', top: '0px', width: `${vw}px`, height: `${vh}px`, borderRadius: '0px', opacity: 0 },
-    // kabuk yolun ~%70'inde tamamen erir: "tuş büyüyüp dağılıyor" hissi kalır, ekranı kaplayan renk katmanı olmaz
-    // (özellikle mürekkep birincil düğmede tam ekran siyah bir kare çakması olurdu)
+    // Kabuk CAM olduğu için sona kadar kalabilir ve orada erir: opak bir renk katmanı ekranı kaplamaz, arkası
+    // bulanık geçer. (Renk dolgusuyken mürekkep düğmede tam ekran siyah bir kare çakması oluyordu, bu yüzden
+    // erkenden eritiliyordu; cam tarifinde o sorun yok.)
   ], { duration: MORPH_MS, easing })
   const clipAnim = el.animate([
     { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px round ${box.radius})`, opacity: 0.55 },

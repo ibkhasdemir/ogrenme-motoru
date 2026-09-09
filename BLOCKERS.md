@@ -237,6 +237,22 @@ Not: yapay zekâ anahtarı için sızıntı yolu aranmış, bulunamamış (yedek
 - Testler: perde kurulur ve kabukla birlikte silinir; azaltılmış harekette ikisi de kurulmaz; uygulama kapanınca ikisi de kalmaz; `--settle-dy` dokunuş yerine göre `12px`/`-12px` olur. Toplam 353 yeşil (mevcut testler genişletildi, bir yeni test eklendi).
 - Durum: **KAPANDI**. Telefon kontrolü: Y-33 güncellendi.
 
+### BL-56 — Koyulaştırılmış palet, cam yüzey dili (iOS 26), yeniden çizilen simgeler (2026-09-09)
+- Bölüm: `14` §7 (token), §8 (light/dark), §9 (kontrast AA, simge tek taşıyıcı değildir), §16 (modern mobil his), §18 (palet kuralı); `10` §1.
+- Gözlem: *"Renk paletini değiştirerek de güzelleştirebiliriz. Daha güzel semboller kullan. **Biraz da yapay duruyor** sanki. Renk paleti **koyulaştırman** lazım."* Ardından: *"Blur değil de yeni tasarım dili var ya, **iOS 26 ile gelen cam efekti**; ekrana gelirken efekt çerçevesi cam olursa efekt ile açılmış olur. Var olan efekti biraz **yavaşlatıp** kenarlarına cam koy, **alttaki kayan butonlara** da ekleyebilirsin."*
+- **Palet koyulaştı ve ısındı.** Açık tema zemini `#f1efe9 → #e6e1d6` (sıcak kum); kart artık **saf beyaz değil** (`#faf8f4`) — saf beyaz yüzey ekranı sentetikleştiriyordu; yalnız en üst katman (`--color-surface-elevated`) beyaza yaklaşır. Mürekkep de nötr siyahtan sıcak mürekkebe döndü (`#191712`); nötr gri/siyah soğuk ve yapay duruyordu. Koyu tema da derinleşip ısındı (`#0e0f11 → #0b0a09`, yüzey `#171512`). `--edge-light`: kenarlıksız kartın üst kenarında kâğıt kalınlığı hissi veren ince ışık.
+- **"Yapay duruyor"un asıl sebebi bulundu: her şey yüzüyordu.** İkincil düğme, çip, grup ve konu satırı hepsi `elev-1` gölge taşıyordu — yedi tane yüzen beyaz kapsül. Artık gölge **yalnız hiyerarşinin gerektirdiği yerde**: kart, birincil eylem, geçici çubuklar. İkincil yüzeyler koyulaşan zeminde saç teli kenarla durur. (Her şey yüzerse hiçbiri öne çıkmaz.)
+- **Cam yüzey dili (kullanıcının istediği "iOS 26 cam efekti"):**
+  - **Kabuk artık camdır.** Dokunulan tuşun rengi yarı saydam karışır (`--shell-tint`), arkasındaki sayfa `blur(20px) saturate(180%)` ile geçer, kenarında ışık halkası (`--glass-rim`) ve içeride üst parıltı (`--glass-sheen`) vardır. Cam yarı saydam olduğu için kabuk **sona kadar kalabiliyor**: BL-54'te renk dolgusuyken mürekkep düğmede tam ekran siyah çakması olduğu için yolun %72'sinde eritmek zorundaydık; cam tarifinde o sorun yok.
+  - **Alt gezinme tek cam çubuk oldu.** Yedi ayrı düğme yerine yapışkan, kapsül, camdan bir çubuk; içindeki düğmeler kendi yüzeyini taşımaz. Yapışkan olması şart: cam ancak altından bir şey geçerse iş görür, sabit zemin üstünde yalnız çerçevedir.
+  - Yapışkan başlık, geri al çubuğu ve perde de aynı cam tarifini (`--glass-blur`) kullanır — tek dil.
+  - Her cam yüzeyin `@supports not (backdrop-filter)` düşüşü vardır: desteklenmeyen tarayıcıda opak yüzeye döner, okunurluk riske girmez.
+- **Hareket yavaşlatıldı** (istek): `--motion-screen` 320 → **420 ms**, kabuk 340 → **460 ms**, kademeli varış tabanı 240 → **300 ms**.
+- **Simgeler yeniden çizildi** (`src/ui/icons.ts`): tek ızgara (24×24), tek çizgi kalınlığı (1.7), yuvarlak uç/köşe, optik olarak eşit ağırlık. Yakala = çember içinde artı · Kutu = tepsi · Atom = kart + artı · Soru = konuşma balonu (karttan ayrışsın diye) · İçerik = açık kitap · İlerleme = yükselen çubuklar · Veri = silindir. Simge etiketin **yerine geçmez**, önüne gelir.
+- **Türkçe hatası düzeltildi:** `.group-sub` kullanıcının kendi alt başlığını `text-transform: uppercase` ile basıyordu. Kullanıcı içeriği büyük harfe çevrilmez — Türkçe'de i/İ bozulur ve özel ad görünümü kaybolur.
+- Ölçüm (gerçek Chrome): açık temada en düşük oran **4.68:1** (şablon bloğundaki ikincil metin; ilk denemede 4.33 çıktı, `--color-surface-sunken` açıldı), koyu temada **6.84:1**. Yatay taşma 0 px (iki temada). AA her yerde geçildi.
+- Durum: **KAPANDI**. Telefon kontrolü: Y-34.
+
 ### BL-12 — Test–faz bağımlılıkları (Yol B) — faz planı onayı
 - `09`'daki bazı test atamaları Yol A'da mevcut olan modüllere yaslanır; Yol B'de ileri faz modülü ister. Beş test hiçbir faza atanmamış (U-RS-07, U-RS-08, I-21, E-19, E-20); E-16 iki fazda; iki test kimliksiz (journal birimi, SW statik taraması). Öneri ve gerekçeler §3'te.
 - Durum: **KAPANDI** (2026-09-08; bkz. §4).
